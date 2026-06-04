@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+rental.db
+uploads/*
+!uploads/.gitkeep
+.streamlit/secrets.toml
+.DS_Store
+.claude/
