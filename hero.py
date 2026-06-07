@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import streamlit.components.v1 as components
 
+import icons
+
 # The 3D scene from the demo (a robot that tracks the cursor).
 SPLINE_SCENE = "https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
 
@@ -112,6 +114,7 @@ _HERO_HTML = f"""
   }}
   .rh-pills {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }}
   .rh-pill {{
+    display: inline-flex; align-items: center; gap: 7px;
     font-size: 12.5px;
     color: #e7e9ec;
     background: rgba(255,255,255,0.06);
@@ -119,6 +122,7 @@ _HERO_HTML = f"""
     padding: 6px 12px;
     border-radius: 999px;
   }}
+  .rh-pill svg {{ opacity: 0.85; }}
 
   /* ---- Right: 3D scene ---- */
   .rh-right {{ flex: 1 1 0; position: relative; }}
@@ -150,10 +154,10 @@ _HERO_HTML = f"""
         run every property from a single place — now with a little life to it.
       </p>
       <div class="rh-pills">
-        <span class="rh-pill">💳 Online rent</span>
-        <span class="rh-pill">🛠️ Maintenance</span>
-        <span class="rh-pill">🏢 Properties</span>
-        <span class="rh-pill">📊 Reports</span>
+        <span class="rh-pill">{icons.svg('card', 14)} Online rent</span>
+        <span class="rh-pill">{icons.svg('wrench', 14)} Maintenance</span>
+        <span class="rh-pill">{icons.svg('building', 14)} Properties</span>
+        <span class="rh-pill">{icons.svg('chart', 14)} Reports</span>
       </div>
     </div>
     <div class="rh-right">

@@ -16,20 +16,23 @@ import repo
 import theme
 from views import manager, renter
 
-st.set_page_config(page_title="Rental Management System", page_icon="🏠",
+st.set_page_config(page_title="RentHarbor", page_icon=":material/cottage:",
                    layout="wide", initial_sidebar_state="expanded")
 theme.inject()
 
 APP_NAME = "RENTHARBOR"
 
 RENTER_ICONS = {
-    "Home": "🏠", "Pay Rent": "💳", "Maintenance": "🛠️",
-    "Documents & Profile": "📄", "Announcements": "📣",
+    "Home": ":material/home:", "Pay Rent": ":material/credit_card:",
+    "Maintenance": ":material/build:",
+    "Documents & Profile": ":material/description:",
+    "Announcements": ":material/campaign:",
 }
 MANAGER_ICONS = {
-    "Dashboard": "📊", "Properties & Units": "🏢", "Tenants & Leases": "🧾",
-    "Rent & Payments": "💳", "Maintenance": "🛠️", "Reports": "📈",
-    "Announcements": "📣",
+    "Dashboard": ":material/dashboard:", "Properties & Units": ":material/apartment:",
+    "Tenants & Leases": ":material/group:", "Rent & Payments": ":material/payments:",
+    "Maintenance": ":material/build:", "Reports": ":material/bar_chart:",
+    "Announcements": ":material/campaign:",
 }
 
 

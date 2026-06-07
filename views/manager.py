@@ -26,8 +26,8 @@ SECTIONS = [
 CATEGORIES = ["plumbing", "electrical", "HVAC", "appliance", "other"]
 PRIORITIES = ["Low", "Med", "High", "Emergency"]
 STATUS_BADGE = {
-    "Paid": "🟢 Paid", "Partial": "🟡 Partial", "Overdue": "🔴 Overdue",
-    "Upcoming": "⚪ Upcoming", "No charge": "— No charge",
+    "Paid": "Paid", "Partial": "Partial", "Overdue": "Overdue",
+    "Upcoming": "Upcoming", "No charge": "No charge",
 }
 
 
@@ -93,10 +93,10 @@ def _dashboard(user) -> None:
         ui.section("Open maintenance tickets")
         oc = s["open_tickets"]
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("🚨 Emergency", oc["Emergency"])
-        m2.metric("🔴 High", oc["High"])
-        m3.metric("🟡 Med", oc["Med"])
-        m4.metric("⚪ Low", oc["Low"])
+        m1.metric("Emergency", oc["Emergency"])
+        m2.metric("High", oc["High"])
+        m3.metric("Med", oc["Med"])
+        m4.metric("Low", oc["Low"])
 
     with right:
         ui.section("Needs attention")
@@ -135,7 +135,7 @@ def _properties(user) -> None:
     if rows:
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-    with st.expander("➕ Add a property"):
+    with st.expander("Add a property", icon=":material/add:"):
         with st.form("add_property", clear_on_submit=True):
             name = st.text_input("Name")
             address = st.text_input("Street address")
@@ -176,7 +176,7 @@ def _manage_property(prop, user) -> None:
             } for u in units])
             st.dataframe(udf, use_container_width=True, hide_index=True)
 
-        with st.expander("➕ Add a unit"):
+        with st.expander("Add a unit", icon=":material/add:"):
             with st.form("add_unit", clear_on_submit=True):
                 label = st.text_input("Unit label (e.g. 3B)")
                 c1, c2, c3 = st.columns(3)
@@ -195,7 +195,7 @@ def _manage_property(prop, user) -> None:
 
         # quick edit of a unit
         if units:
-            with st.expander("✏️ Edit a unit"):
+            with st.expander("Edit a unit", icon=":material/edit:"):
                 umap = {u["label"]: u for u in units}
                 ulabel = st.selectbox("Unit", list(umap.keys()), key="edit_unit_sel")
                 u = umap[ulabel]
@@ -239,7 +239,7 @@ def _manage_property(prop, user) -> None:
         else:
             st.write("**Archive** keeps all historical payment & maintenance records "
                      "(soft delete — preferred).")
-            if st.button("📦 Archive property"):
+            if st.button("Archive property", icon=":material/archive:"):
                 repo.archive_property(prop["id"], user["id"])
                 st.success("Archived.")
                 st.rerun()
@@ -250,7 +250,7 @@ def _manage_property(prop, user) -> None:
                        "or maintenance history. Archive it instead.")
         else:
             st.write("No historical data exists, so this property can be permanently deleted.")
-            if st.button("🗑️ Hard delete (permanent)"):
+            if st.button("Hard delete (permanent)", icon=":material/delete:"):
                 repo.hard_delete_property(prop["id"], user["id"])
                 st.success("Deleted.")
                 st.rerun()
@@ -263,8 +263,9 @@ def _manage_property(prop, user) -> None:
 def _tenants(user) -> None:
     st.header("Tenants & leases")
     leases = repo.active_leases()
-    query = st.text_input("🔎 Search", placeholder="Filter by property, unit, or tenant…",
-                          label_visibility="collapsed").strip().lower()
+    query = st.text_input("Search", placeholder="Filter by property, unit, or tenant…",
+                          label_visibility="collapsed",
+                          icon=":material/search:").strip().lower()
     rows = []
     for l in leases:
         tenants = ", ".join(t["name"] for t in repo.lease_tenants(l["id"])) or "—"
@@ -347,10 +348,11 @@ def _tenants(user) -> None:
                 st.success(f"Attached {fname}.")
             docs = repo.attachments_for("lease", lease["id"])
             for d in docs:
-                st.caption(f"📎 {d['filename']}")
+                st.caption(f"Attachment · {d['filename']}")
 
             st.divider()
-            if st.button("🔚 Move-out / end lease (marks unit vacant)"):
+            if st.button("Move-out / end lease (marks unit vacant)",
+                         icon=":material/logout:"):
                 repo.end_lease(lease["id"], user["id"])
                 st.success("Lease ended; unit is now vacant.")
                 st.rerun()
@@ -404,7 +406,7 @@ def _rent(user) -> None:
     with tab_behind:
         behind = repo.delinquencies()
         if not behind:
-            st.success("No overdue or partial balances. 🎉")
+            st.success("No overdue or partial balances.")
         else:
             df = pd.DataFrame([{
                 "Property": r["property"], "Unit": r["unit"], "Tenant": r["tenant"],
@@ -458,13 +460,13 @@ def _maintenance(user) -> None:
 
     st.caption(f"{len(tickets)} ticket(s)")
     for t in tickets:
-        prio_icon = {"Emergency": "🚨", "High": "🔴", "Med": "🟡", "Low": "⚪"}.get(t["priority"], "")
-        with st.expander(f"{prio_icon} [{t['priority']}] {t['title']} — "
-                         f"{t['property_name']} {t['unit_label']}  ·  {t['status']}"):
+        with st.expander(f"[{t['priority']}] {t['title']} — "
+                         f"{t['property_name']} {t['unit_label']}  ·  {t['status']}",
+                         icon=":material/build:"):
             _manager_ticket_detail(t, user)
 
     st.divider()
-    with st.expander("➕ Create a ticket on behalf of a tenant"):
+    with st.expander("Create a ticket on behalf of a tenant", icon=":material/add:"):
         _manager_create_ticket(user)
 
 
@@ -476,7 +478,7 @@ def _manager_ticket_detail(t, user) -> None:
         try:
             st.image(a["file_path"], width=240, caption=a["filename"])
         except Exception:
-            st.caption(f"📎 {a['filename']}")
+            st.caption(f"Attachment · {a['filename']}")
 
     with st.form(f"ticket_{t['id']}"):
         c1, c2, c3 = st.columns(3)
@@ -595,8 +597,8 @@ def _reports(user) -> None:
 def _csv_download(df: pd.DataFrame, filename: str) -> None:
     buf = io.StringIO()
     df.to_csv(buf, index=False)
-    st.download_button("⬇️ Export CSV", buf.getvalue(), file_name=filename,
-                       mime="text/csv")
+    st.download_button("Export CSV", buf.getvalue(), file_name=filename,
+                       mime="text/csv", icon=":material/download:")
 
 
 # --------------------------------------------------------------------------- #

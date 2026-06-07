@@ -220,6 +220,15 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-ann .rh-ann-body {{ color:{INK}; line-height:1.5; }}
 .rh-ann .rh-ann-meta {{ color:{MUTED}; font-size:0.78rem; margin-top:6px; }}
 
+/* Status timeline chips (maintenance ticket progress) */
+.rh-steps {{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }}
+.rh-step {{
+    font-size:0.75rem; font-weight:600; padding:4px 11px; border-radius:999px;
+    border:1px solid {CARD_BORDER}; color:{MUTED}; background:{SURFACE};
+}}
+.rh-step.done {{ background:{PRIMARY_SOFT}; color:{PRIMARY_DARK}; border-color:#D7DEC9; }}
+.rh-step.now  {{ background:{PRIMARY}; color:#FFFFFF; border-color:{PRIMARY}; }}
+
 /* Sandbox / test-mode banner */
 .rh-sandbox {{
     display:inline-flex; align-items:center; gap:8px;

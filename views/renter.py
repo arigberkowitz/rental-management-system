@@ -7,6 +7,7 @@ import streamlit as st
 
 import auth
 import db
+import icons
 import payments
 import repo
 import storage
@@ -55,7 +56,7 @@ def _dashboard(user, lease) -> None:
         f"""
         <div class="rp-header">
           <div class="rp-title">Home</div>
-          <div class="rp-icons">🔔&nbsp;⚙️</div>
+          <div class="rp-icons">{icons.svg('bell', 20)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -112,16 +113,17 @@ def _dashboard(user, lease) -> None:
     # ---- Quick links (rounded tiles) ------------------------------------- #
     ui.section("Quick links")
     links = [
-        ("💳", "Pay Rent", "Pay Rent"),
-        ("🛠️", "Submit Request", "Maintenance"),
-        ("📄", "View Documents", "Documents & Profile"),
-        ("📣", "Announcements", "Announcements"),
-        ("🛡️", "Renter's Insurance", None),
+        ("card", "Pay Rent", "Pay Rent"),
+        ("wrench", "Submit Request", "Maintenance"),
+        ("file", "View Documents", "Documents & Profile"),
+        ("megaphone", "Announcements", "Announcements"),
+        ("shield", "Renter's Insurance", None),
     ]
     cols = st.columns(len(links))
     for col, (icon, label, target) in zip(cols, links):
         with col:
-            st.markdown(f"<div class='rp-circle'>{icon}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='rp-circle'>{icons.svg(icon, 24)}</div>",
+                        unsafe_allow_html=True)
             if target:
                 st.button(label, key=f"ql_{label}", use_container_width=True,
                           on_click=_go, args=(target,))
@@ -152,7 +154,7 @@ def _dashboard(user, lease) -> None:
                       if t["status"] not in ("Closed", "Resolved")]
             st.markdown(f"#### Open maintenance ({len(open_t)})")
             if not open_t:
-                st.caption("No open requests. 🎉")
+                st.caption("No open requests.")
             for t in open_t:
                 st.markdown(
                     f"<div class='rh-row'><span class='rh-row-title'>{t['title']}</span>"
@@ -271,7 +273,7 @@ def _checkout(user, lease, balance) -> None:
                            "manager's rent roll have been updated.")
             st.button("Done", on_click=lambda: None)  # triggers a rerun to refresh balance
         else:
-            st.error(f"❌ {result.error}")
+            st.error(result.error)
 
 
 def _history(user, lease) -> None:
@@ -288,9 +290,9 @@ def _history(user, lease) -> None:
                        f"{utils.period_label(p['period']) if p['period'] else '—'} · "
                        f"status: {p['status']}")
             receipt = _receipt_text(user, lease, p)
-            c2.download_button("🧾 Receipt", receipt,
+            c2.download_button("Receipt", receipt,
                                file_name=f"receipt_{p['id']}.txt", mime="text/plain",
-                               key=f"rcpt_{p['id']}")
+                               icon=":material/receipt_long:", key=f"rcpt_{p['id']}")
 
     # late fees explanation
     fees = [c for c in repo.attachments_for("lease", lease["id"])]  # noqa: F841
@@ -336,7 +338,7 @@ def _maintenance(user, lease) -> None:
         _no_lease()
         return
 
-    with st.expander("➕ Submit a new request", expanded=False):
+    with st.expander("Submit a new request", expanded=False, icon=":material/add:"):
         with st.form("renter_ticket", clear_on_submit=True):
             title = st.text_input("Title", placeholder="e.g. Leaky faucet in kitchen")
             desc = st.text_area("Description", placeholder="Describe the issue…")
@@ -363,8 +365,7 @@ def _maintenance(user, lease) -> None:
         return
 
     for t in tickets:
-        prio_icon = {"Emergency": "🚨", "High": "🔴", "Med": "🟡", "Low": "⚪"}.get(t["priority"], "")
-        with st.expander(f"{prio_icon} {t['title']} — {t['status']}"):
+        with st.expander(f"{t['title']} — {t['status']}", icon=":material/build:"):
             st.markdown(
                 ui.status_badge(t["status"]) + " " + ui.badge(t["priority"],
                     {"Emergency": "red", "High": "red", "Med": "amber", "Low": "gray"}
@@ -380,7 +381,7 @@ def _maintenance(user, lease) -> None:
                 try:
                     st.image(a["file_path"], width=240, caption=a["filename"])
                 except Exception:
-                    st.caption(f"📎 {a['filename']}")
+                    st.caption(f"Attachment · {a['filename']}")
 
             _status_timeline(t)
 
@@ -405,11 +406,12 @@ def _status_timeline(t) -> None:
         idx = flow.index(t["status"])
     except ValueError:
         idx = 0
-    steps = []
+    chips = []
     for i, s in enumerate(flow):
-        mark = "✅" if i < idx else ("🔵" if i == idx else "⚪")
-        steps.append(f"{mark} {s}")
-    st.write("  →  ".join(steps))
+        cls = "done" if i < idx else ("now" if i == idx else "todo")
+        chips.append(f"<span class='rh-step {cls}'>{s}</span>")
+    st.markdown("<div class='rh-steps'>" + "".join(chips) + "</div>",
+                unsafe_allow_html=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -426,10 +428,11 @@ def _documents(user, lease) -> None:
         for d in docs:
             try:
                 with open(d["file_path"], "rb") as fh:
-                    st.download_button(f"📄 {d['filename']}", fh.read(),
-                                       file_name=d["filename"], key=f"doc_{d['id']}")
+                    st.download_button(d["filename"], fh.read(),
+                                       file_name=d["filename"], key=f"doc_{d['id']}",
+                                       icon=":material/description:")
             except OSError:
-                st.caption(f"📄 {d['filename']} (unavailable)")
+                st.caption(f"{d['filename']} (unavailable)")
 
     st.divider()
     st.subheader("Profile")
