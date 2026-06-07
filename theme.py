@@ -172,6 +172,13 @@ hr {{ border-color: {CARD_BORDER}; }}
 /* sidebar brand block */
 .rp-brand {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; letter-spacing:0.04em; line-height:1.15; color:{INK}; }}
 .rp-unit {{ color:{MUTED}; font-size:0.85rem; margin-top:2px; }}
+.rh-brand-mark {{ display:flex; align-items:center; gap:11px; margin-bottom:4px; }}
+.rh-brand-ico {{
+    width:36px; height:36px; border-radius:11px; flex:none;
+    background:{PRIMARY}; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 12px rgba(94,107,77,0.30);
+}}
 
 /* ---- Reusable premium components (ui.py) ---- */
 .rh-balance {{

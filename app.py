@@ -12,6 +12,7 @@ import streamlit as st
 import auth
 import db
 import hero
+import icons
 import repo
 import theme
 from views import manager, renter
@@ -87,19 +88,25 @@ def login_screen() -> None:
 
 
 def _sidebar_brand(user, is_manager) -> None:
+    mark = f"<span class='rh-brand-ico'>{icons.svg('home', 18)}</span>"
     if is_manager:
-        st.markdown(f"<div class='rp-brand'>{APP_NAME}</div>", unsafe_allow_html=True)
-        st.markdown("<div class='rp-unit'>Property Management</div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='rh-brand-mark'>{mark}"
+            f"<span class='rp-brand'>{APP_NAME}</span></div>"
+            "<div class='rp-unit'>Property Management</div>",
+            unsafe_allow_html=True,
+        )
     else:
         lease = repo.active_lease_for_tenant(user["id"])
         prop = (lease["property_name"] if lease else APP_NAME).upper()
         unit = f"Unit {lease['unit_label']} · {lease['city']}" if lease else ""
-        st.markdown(f"<div class='rp-unit' style='letter-spacing:.12em'>{APP_NAME}</div>",
-                    unsafe_allow_html=True)
-        st.markdown(f"<div class='rp-brand' style='font-size:1.25rem'>{prop}</div>",
-                    unsafe_allow_html=True)
-        st.markdown(f"<div class='rp-unit'>{unit}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='rh-brand-mark'>{mark}"
+            f"<span class='rp-unit' style='letter-spacing:.12em'>{APP_NAME}</span></div>"
+            f"<div class='rp-brand' style='font-size:1.25rem'>{prop}</div>"
+            f"<div class='rp-unit'>{unit}</div>",
+            unsafe_allow_html=True,
+        )
     st.divider()
 
 
