@@ -8,7 +8,6 @@ bcrypt. Charges/payments are generated relative to *today* so the dashboard's
 
 from __future__ import annotations
 
-import os
 import random
 
 import auth
@@ -107,9 +106,7 @@ def make_user(username, name, role, password, email=None, phone=None) -> int:
 
 
 def seed() -> None:
-    if os.path.exists(db.DB_PATH):
-        os.remove(db.DB_PATH)
-    db.init_db()
+    db.reset()  # drop + recreate tables (SQLite file delete or Postgres DROP)
 
     # --- Users ---------------------------------------------------------------
     ari_id = make_user("ari", "ARI", auth.MANAGER, "manager123", phone="415-555-0101")

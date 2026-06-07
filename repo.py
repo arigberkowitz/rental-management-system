@@ -306,40 +306,31 @@ def record_payment(lease_id, amount, method, *, tenant_id=None, processor_ref=No
     A non-succeeded payment never marks rent as paid.
     """
     period = period or utils.current_period()
-    with db._write_lock:  # noqa: SLF001 - single transactional write
-        conn = db.get_connection()
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO payments (lease_id, tenant_id, amount, method, status, "
-                "processor_ref, period, last4, recorded_by) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (lease_id, tenant_id, amount, method, status, processor_ref,
-                 period, last4, recorded_by),
-            )
-            payment_id = cur.lastrowid
-            if status == "succeeded":
-                # mark the period's rent charge paid if fully covered
-                cur.execute(
-                    "SELECT COALESCE(SUM(amount),0) AS s FROM charges "
-                    "WHERE lease_id=? AND period=?",
+    with db.transaction() as tx:  # atomic across SQLite and Postgres
+        payment_id = tx.insert(
+            "INSERT INTO payments (lease_id, tenant_id, amount, method, status, "
+            "processor_ref, period, last4, recorded_by) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (lease_id, tenant_id, amount, method, status, processor_ref,
+             period, last4, recorded_by),
+        )
+        if status == "succeeded":
+            # mark the period's rent charge paid if fully covered
+            charged = tx.one(
+                "SELECT COALESCE(SUM(amount),0) AS s FROM charges "
+                "WHERE lease_id=? AND period=?",
+                (lease_id, period),
+            )["s"]
+            paid = tx.one(
+                "SELECT COALESCE(SUM(amount),0) AS s FROM payments "
+                "WHERE lease_id=? AND period=? AND status='succeeded'",
+                (lease_id, period),
+            )["s"]
+            if charged > 0 and paid >= charged:
+                tx.run(
+                    "UPDATE charges SET status='paid' WHERE lease_id=? AND period=?",
                     (lease_id, period),
                 )
-                charged = cur.fetchone()["s"]
-                cur.execute(
-                    "SELECT COALESCE(SUM(amount),0) AS s FROM payments "
-                    "WHERE lease_id=? AND period=? AND status='succeeded'",
-                    (lease_id, period),
-                )
-                paid = cur.fetchone()["s"]
-                if charged > 0 and paid >= charged:
-                    cur.execute(
-                        "UPDATE charges SET status='paid' WHERE lease_id=? AND period=?",
-                        (lease_id, period),
-                    )
-            conn.commit()
-        finally:
-            conn.close()
     db.audit(recorded_by or tenant_id, "payment", "lease", lease_id,
              f"{method} ${amount:.2f} ({status})")
     return payment_id
@@ -592,7 +583,7 @@ def update_ticket(ticket_id, *, status=None, priority=None, assignee_id=None,
         fields.append("cost=?"); params.append(cost)
     if not fields:
         return
-    fields.append("updated_at=datetime('now')")
+    fields.append("updated_at=CURRENT_TIMESTAMP")
     params.append(ticket_id)
     db.execute(f"UPDATE maintenance_tickets SET {', '.join(fields)} WHERE id=?", tuple(params))
     db.audit(actor_id, "update", "ticket", ticket_id,
@@ -605,7 +596,7 @@ def add_ticket_update(ticket_id, author_id, body, visible_to_tenant=True) -> int
         "VALUES (?, ?, ?, ?)",
         (ticket_id, author_id, body, 1 if visible_to_tenant else 0),
     )
-    db.execute("UPDATE maintenance_tickets SET updated_at=datetime('now') WHERE id=?",
+    db.execute("UPDATE maintenance_tickets SET updated_at=CURRENT_TIMESTAMP WHERE id=?",
                (ticket_id,))
     return uid
 
