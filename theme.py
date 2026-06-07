@@ -227,6 +227,16 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-ann .rh-ann-body {{ color:{INK}; line-height:1.5; }}
 .rh-ann .rh-ann-meta {{ color:{MUTED}; font-size:0.78rem; margin-top:6px; }}
 
+/* Empty states */
+.rh-empty {{ text-align:center; padding:34px 22px; }}
+.rh-empty-ico {{
+    width:54px; height:54px; border-radius:16px; margin:0 auto 12px;
+    background:{PRIMARY_SOFT}; color:{PRIMARY};
+    display:flex; align-items:center; justify-content:center;
+}}
+.rh-empty-title {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.05rem; color:{INK}; }}
+.rh-empty-body {{ color:{MUTED}; font-size:0.9rem; margin-top:4px; max-width:30rem; margin-left:auto; margin-right:auto; }}
+
 /* Property cards (manager Properties grid) */
 .rh-pcard {{
     border:1px solid {CARD_BORDER}; border-radius:18px; overflow:hidden;

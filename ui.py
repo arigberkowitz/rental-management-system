@@ -103,6 +103,16 @@ def status_badge(status: str) -> str:
     return badge(status, _STATUS_TONE.get(status, "gray"))
 
 
+def empty_state(icon_name: str, title: str, body: str = "") -> None:
+    """Render a clean, on-brand empty state with an icon, title, and hint."""
+    body_html = f"<div class='rh-empty-body'>{html.escape(body)}</div>" if body else ""
+    st.markdown(
+        f"<div class='rh-empty'><div class='rh-empty-ico'>{icons.svg(icon_name, 24)}</div>"
+        f"<div class='rh-empty-title'>{html.escape(title)}</div>{body_html}</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def property_card(name: str, city: str, address: str, units: int,
                   occupied: int, occupancy: float, rent_roll: str) -> str:
     """Return a premium property card (HTML string) for the Properties grid."""

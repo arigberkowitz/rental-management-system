@@ -152,11 +152,13 @@ def _properties(user) -> None:
                 else:
                     st.error("Name, address, and city are required.")
 
+    if not props:
+        ui.empty_state("building", "No properties yet",
+                       "Add your first property above to start building your portfolio.")
+        return
+
     st.divider()
     st.subheader("Manage a property")
-    if not props:
-        st.info("No properties yet.")
-        return
     pmap = {f"{p['name']} ({p['city']})": p for p in props}
     choice = st.selectbox("Select property", list(pmap.keys()))
     prop = pmap[choice]
@@ -283,9 +285,10 @@ def _tenants(user) -> None:
                    + (f" matching “{query}”" if query else ""))
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     elif query:
-        st.info(f"No leases match “{query}”.")
+        ui.empty_state("users", "No matches", f"No leases match “{query}”.")
     else:
-        st.info("No active leases yet.")
+        ui.empty_state("users", "No active leases yet",
+                       "Create a lease below to assign a tenant to a vacant unit.")
 
     st.divider()
     col_new, col_manage = st.columns(2)

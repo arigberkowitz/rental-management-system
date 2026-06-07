@@ -41,7 +41,9 @@ def render(user, section: str) -> None:
 
 
 def _no_lease():
-    st.info("You don't have an active lease on file. Please contact your property manager.")
+    ui.empty_state("file", "No active lease",
+                   "You don't have an active lease on file. "
+                   "Please contact your property manager.")
 
 
 # --------------------------------------------------------------------------- #
