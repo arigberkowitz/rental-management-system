@@ -11,6 +11,7 @@ import streamlit as st
 
 import auth
 import db
+import hero
 import repo
 import theme
 from views import manager, renter
@@ -46,10 +47,7 @@ _bootstrap()
 
 
 def login_screen() -> None:
-    st.markdown(f"<h1 style='text-align:center'>🏠 {APP_NAME}</h1>",
-                unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;color:gray'>One platform for managers "
-                "and tenants</p>", unsafe_allow_html=True)
+    hero.render_login_hero()
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         with st.container(border=True):
