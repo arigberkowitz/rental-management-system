@@ -13,6 +13,33 @@ import streamlit as st
 
 import icons
 
+# A subtle skyline motif layered over each cover gradient (no external images,
+# never breaks). Stretches to the cover width via preserveAspectRatio.
+_SKYLINE = (
+    "<svg class='rh-skyline' viewBox='0 0 320 70' preserveAspectRatio='none'>"
+    "<g fill='rgba(255,255,255,0.13)'>"
+    "<rect x='8' y='26' width='26' height='44'/>"
+    "<rect x='38' y='12' width='18' height='58'/>"
+    "<rect x='60' y='32' width='22' height='38'/>"
+    "<rect x='86' y='6' width='28' height='64'/>"
+    "<rect x='118' y='40' width='16' height='30'/>"
+    "<rect x='138' y='20' width='30' height='50'/>"
+    "<rect x='172' y='10' width='20' height='60'/>"
+    "<rect x='196' y='30' width='26' height='40'/>"
+    "<rect x='226' y='16' width='18' height='54'/>"
+    "<rect x='248' y='24' width='30' height='46'/>"
+    "<rect x='282' y='8' width='20' height='62'/>"
+    "<rect x='306' y='36' width='14' height='34'/>"
+    "</g>"
+    "<g fill='rgba(255,255,255,0.10)'>"
+    "<rect x='92' y='14' width='4' height='4'/><rect x='100' y='14' width='4' height='4'/>"
+    "<rect x='92' y='24' width='4' height='4'/><rect x='100' y='24' width='4' height='4'/>"
+    "<rect x='176' y='18' width='3' height='4'/><rect x='183' y='18' width='3' height='4'/>"
+    "<rect x='176' y='28' width='3' height='4'/><rect x='183' y='28' width='3' height='4'/>"
+    "<rect x='44' y='20' width='3' height='4'/><rect x='50' y='20' width='3' height='4'/>"
+    "</g></svg>"
+)
+
 # Muted, premium cover gradients chosen deterministically per property.
 _COVERS = [
     "linear-gradient(135deg,#5E6B4D,#3f4a34)",   # olive
@@ -85,7 +112,7 @@ def property_card(name: str, city: str, address: str, units: int,
     e = html.escape
     return (
         f"<div class='rh-pcard'>"
-        f"<div class='rh-pcard-cover' style='background:{cover}'>"
+        f"<div class='rh-pcard-cover' style='background:{cover}'>{_SKYLINE}"
         f"<span class='rh-pcard-ico'>{icons.svg('building', 22)}</span>"
         f"<span class='rh-pcard-city'>{e(city)}</span></div>"
         f"<div class='rh-pcard-body'>"

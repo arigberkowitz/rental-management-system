@@ -235,12 +235,13 @@ hr {{ border-color: {CARD_BORDER}; }}
 }}
 .rh-pcard:hover {{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(30,35,29,0.10); }}
 .rh-pcard-cover {{
-    height:96px; position:relative; display:flex; align-items:flex-end;
-    padding:12px 16px; color:#fff;
+    height:104px; position:relative; display:flex; align-items:flex-end;
+    padding:12px 16px; color:#fff; overflow:hidden;
 }}
-.rh-pcard-cover .rh-pcard-city {{ font-size:0.8rem; font-weight:600; opacity:.92;
+.rh-pcard-cover .rh-skyline {{ position:absolute; left:0; bottom:0; width:100%; height:78%; }}
+.rh-pcard-cover .rh-pcard-city {{ position:relative; z-index:1; font-size:0.8rem; font-weight:600; opacity:.95;
     text-transform:uppercase; letter-spacing:0.06em; }}
-.rh-pcard-cover .rh-pcard-ico {{ position:absolute; top:12px; right:14px; opacity:.8; }}
+.rh-pcard-cover .rh-pcard-ico {{ position:absolute; z-index:1; top:12px; right:14px; opacity:.85; }}
 .rh-pcard-body {{ padding:14px 16px 16px; }}
 .rh-pcard-head {{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }}
 .rh-pcard-name {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.05rem; color:{INK}; line-height:1.2; }}
