@@ -209,6 +209,24 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-row:last-child {{ border-bottom:none; }}
 .rh-row .rh-row-title {{ font-weight:600; color:{INK}; }}
 .rh-row .rh-row-sub {{ color:{MUTED}; font-size:0.85rem; }}
+
+/* Announcement card — replaces the default blue st.info for on-brand feel */
+.rh-ann {{
+    background:{PRIMARY_SOFT}; border:1px solid #DDE4D0;
+    border-left:4px solid {PRIMARY}; border-radius:14px;
+    padding:14px 16px; margin-bottom:10px;
+}}
+.rh-ann .rh-ann-scope {{ font-weight:700; color:{PRIMARY_DARK}; font-size:0.9rem; margin-bottom:2px; }}
+.rh-ann .rh-ann-body {{ color:{INK}; line-height:1.5; }}
+.rh-ann .rh-ann-meta {{ color:{MUTED}; font-size:0.78rem; margin-top:6px; }}
+
+/* Sandbox / test-mode banner */
+.rh-sandbox {{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#EEF0FF; color:#3B36B8; border:1px solid #D7D9FB;
+    padding:8px 14px; border-radius:999px; font-weight:600; font-size:0.86rem;
+}}
+.rh-sandbox::before {{ content:''; width:8px; height:8px; border-radius:50%; background:#635bff; }}
 </style>
 """
 

@@ -48,6 +48,11 @@ _bootstrap()
 
 def login_screen() -> None:
     hero.render_login_hero()
+    st.markdown(
+        "<p style='text-align:center;color:#6B7167;margin:22px 0 6px;font-size:1.02rem'>"
+        "Sign in to your portal</p>",
+        unsafe_allow_html=True,
+    )
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         with st.container(border=True):

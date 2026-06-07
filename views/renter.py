@@ -180,7 +180,7 @@ def _dashboard(user, lease) -> None:
     if not anns:
         st.caption("Nothing new.")
     for a in anns:
-        st.info(f"📣 {a['body']}  \n_{a['created_at'][:16]}_")
+        ui.announcement_card(a["body"], meta=a["created_at"][:16])
 
 
 # --------------------------------------------------------------------------- #
@@ -212,10 +212,7 @@ def _pay(user, lease) -> None:
 
 def _checkout(user, lease, balance) -> None:
     st.markdown(
-        """
-        <div style="background:#635bff;color:white;padding:10px 16px;border-radius:8px;
-        font-weight:600;display:inline-block;">⬤ Sandbox checkout · Test mode — no real charge</div>
-        """,
+        "<span class='rh-sandbox'>Sandbox checkout · Test mode — no real charge</span>",
         unsafe_allow_html=True,
     )
     st.caption("Use Stripe test card **4242 4242 4242 4242**, any future expiry, any CVC. "
@@ -255,18 +252,23 @@ def _checkout(user, lease, balance) -> None:
                 last4=result.last4, period=utils.current_period(),
                 recorded_by=user["id"],
             )
-            st.success(f"✅ Payment of {utils.money_cents(amount)} succeeded!")
-            st.markdown(
-                f"""
-                **Receipt**
-                - Amount: **{utils.money_cents(amount)}**
-                - Date: {utils.today().strftime('%b %d, %Y')}
-                - Card: •••• {result.last4}
-                - Reference: `{result.processor_ref}`
-                """
-            )
-            st.caption("This was a simulated payment (test mode). "
-                       "Your balance and your manager's rent roll have been updated.")
+            st.success(f"Payment of {utils.money_cents(amount)} succeeded!")
+            with st.container(border=True):
+                st.markdown("#### Receipt")
+                rows = [
+                    ("Amount", utils.money_cents(amount)),
+                    ("Date", utils.today().strftime("%b %d, %Y")),
+                    ("Card", f"•••• {result.last4}"),
+                    ("Reference", result.processor_ref),
+                ]
+                for label, value in rows:
+                    st.markdown(
+                        f"<div class='rh-row'><span class='rh-row-sub'>{label}</span>"
+                        f"<span class='rh-row-title'>{value}</span></div>",
+                        unsafe_allow_html=True,
+                    )
+                st.caption("Simulated payment (test mode). Your balance and your "
+                           "manager's rent roll have been updated.")
             st.button("Done", on_click=lambda: None)  # triggers a rerun to refresh balance
         else:
             st.error(f"❌ {result.error}")
@@ -456,7 +458,8 @@ def _announcements(user, lease) -> None:
         st.caption("Nothing posted yet.")
     for a in anns:
         scope = a["property_name"] or "All tenants"
-        st.info(f"📣 **{scope}** — {a['body']}  \n_{a['created_at'][:16]} · {a['author_name']}_")
+        ui.announcement_card(a["body"], scope=scope,
+                             meta=f"{a['created_at'][:16]} · {a['author_name']}")
 
 
 # --------------------------------------------------------------------------- #

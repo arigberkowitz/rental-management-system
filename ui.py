@@ -62,3 +62,17 @@ _STATUS_TONE = {
 def status_badge(status: str) -> str:
     """Return a status pill HTML string with a sensible tone for the status."""
     return badge(status, _STATUS_TONE.get(status, "gray"))
+
+
+def announcement_card(body: str, scope: str | None = None,
+                      meta: str | None = None) -> None:
+    """Render an on-brand announcement card (replaces the default blue st.info)."""
+    scope_html = (
+        f"<div class='rh-ann-scope'>{html.escape(scope)}</div>" if scope else ""
+    )
+    meta_html = f"<div class='rh-ann-meta'>{html.escape(meta)}</div>" if meta else ""
+    st.markdown(
+        f"<div class='rh-ann'>{scope_html}"
+        f"<div class='rh-ann-body'>{html.escape(body)}</div>{meta_html}</div>",
+        unsafe_allow_html=True,
+    )

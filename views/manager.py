@@ -621,8 +621,8 @@ def _announcements(user) -> None:
                 st.error("Message can't be empty.")
 
     st.divider()
-    st.subheader("Recent")
+    ui.section("Recent")
     for a in repo.all_announcements():
         scope = a["property_name"] or "All tenants"
-        st.write(f"📣 **{scope}** · _{a['created_at'][:16]}_ — {a['body']}")
-        st.caption(f"by {a['author_name']}")
+        ui.announcement_card(a["body"], scope=scope,
+                             meta=f"{a['created_at'][:16]} · by {a['author_name']}")
