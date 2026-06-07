@@ -227,6 +227,17 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-ann .rh-ann-body {{ color:{INK}; line-height:1.5; }}
 .rh-ann .rh-ann-meta {{ color:{MUTED}; font-size:0.78rem; margin-top:6px; }}
 
+/* Priority stat cards (manager dashboard maintenance) */
+.rh-prio {{ display:flex; gap:10px; }}
+.rh-prio-card {{ flex:1; background:{SURFACE}; border:1px solid {CARD_BORDER};
+    border-radius:14px; padding:12px 14px; }}
+.rh-prio-card .dot {{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-bottom:9px; }}
+.rh-prio-card .dot.red {{ background:{RED}; }}
+.rh-prio-card .dot.amber {{ background:{AMBER}; }}
+.rh-prio-card .dot.gray {{ background:{MUTED}; }}
+.rh-prio-card .n {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.6rem; color:{INK}; line-height:1; }}
+.rh-prio-card .l {{ color:{MUTED}; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.04em; margin-top:4px; }}
+
 /* Empty states */
 .rh-empty {{ text-align:center; padding:34px 22px; }}
 .rh-empty-ico {{

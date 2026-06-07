@@ -92,11 +92,13 @@ def _dashboard(user) -> None:
 
         ui.section("Open maintenance tickets")
         oc = s["open_tickets"]
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Emergency", oc["Emergency"])
-        m2.metric("High", oc["High"])
-        m3.metric("Med", oc["Med"])
-        m4.metric("Low", oc["Low"])
+        prio_cards = "".join(
+            f"<div class='rh-prio-card'><span class='dot {tone}'></span>"
+            f"<div class='n'>{oc[label]}</div><div class='l'>{label}</div></div>"
+            for label, tone in [("Emergency", "red"), ("High", "red"),
+                                ("Med", "amber"), ("Low", "gray")]
+        )
+        st.markdown(f"<div class='rh-prio'>{prio_cards}</div>", unsafe_allow_html=True)
 
     with right:
         ui.section("Needs attention")
