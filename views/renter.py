@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 import auth
+import db
 import payments
 import repo
 import storage
+import ui
 import utils
 
 SECTIONS = ["Home", "Pay Rent", "Maintenance", "Documents & Profile", "Announcements"]
@@ -63,34 +66,51 @@ def _dashboard(user, lease) -> None:
 
     balance = repo.lease_balance(lease["id"])
     due = utils.due_date_for(utils.current_period(), lease["due_day"])
+    autopay_key = f"autopay:{lease['id']}"
+    autopay_on = db.get_pref(autopay_key, "0") == "1"
 
-    # ---- Balance hero card ------------------------------------------------ #
-    with st.container(border=True):
-        top_l, top_r = st.columns([3, 1])
-        with top_l:
-            st.markdown("<div class='rp-balance-label'>Balance Due</div>",
-                        unsafe_allow_html=True)
-            st.markdown(f"<div class='rp-balance-amount'>{utils.money_cents(max(balance,0))}</div>",
-                        unsafe_allow_html=True)
-            st.markdown(f"<div class='rp-muted'>Next due {due.strftime('%b %d, %Y')} · "
-                        f"Rent {utils.money(lease['rent_amount'])}/mo</div>",
-                        unsafe_allow_html=True)
-        with top_r:
-            st.write("")
-            st.button("Pay Now", type="primary", use_container_width=True,
-                      on_click=_go, args=("Pay Rent",), disabled=balance <= 0)
-        st.divider()
-        bl, br = st.columns([3, 1])
-        bl.markdown("Automatic Payments: <b>Off</b> <span class='rp-dot-off'>●</span>",
-                    unsafe_allow_html=True)
-        br.markdown("<div style='text-align:right'><span class='rp-muted'>Set Up</span></div>",
-                    unsafe_allow_html=True)
-        st.markdown("<span class='rp-muted'>Manage Wallet</span> "
-                    "<span class='rp-muted' style='font-size:.8rem'>(Phase 2)</span>",
-                    unsafe_allow_html=True)
+    # ---- Premium balance hero -------------------------------------------- #
+    paid_up = balance <= 0
+    status_pill = (
+        "<span class='rh-badge green' style='background:rgba(255,255,255,.16);color:#eaf3e2'>Paid up</span>"
+        if paid_up else
+        "<span class='rh-badge amber' style='background:rgba(255,255,255,.16);color:#fbe6c8'>Balance due</span>"
+    )
+    autopay_pill = ("<span class='rh-badge' style='background:rgba(255,255,255,.16);color:#eaf3e2'>"
+                    "Autopay on</span>") if autopay_on else ""
+    st.markdown(
+        f"""
+        <div class='rh-balance'>
+          <div style='display:flex;justify-content:space-between;align-items:flex-start'>
+            <div>
+              <div class='rp-balance-label'>Balance due</div>
+              <div class='rp-balance-amount'>{utils.money_cents(max(balance, 0))}</div>
+              <div style='color:#dfe6d4;margin-top:8px;font-size:0.95rem'>
+                Next due {due.strftime('%b %d, %Y')} &nbsp;·&nbsp; Rent {utils.money(lease['rent_amount'])}/mo
+              </div>
+            </div>
+            <div style='display:flex;gap:8px'>{status_pill}{autopay_pill}</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    act_l, act_r = st.columns([1, 1])
+    with act_l:
+        st.button("Pay now", type="primary", use_container_width=True,
+                  on_click=_go, args=("Pay Rent",), disabled=paid_up)
+    with act_r:
+        new_autopay = st.toggle(
+            "Autopay on the due date", value=autopay_on,
+            help="Automatically pay your full balance each month on the due date. "
+                 "(Demo — no real charge is made.)",
+        )
+        if new_autopay != autopay_on:
+            db.set_pref(autopay_key, "1" if new_autopay else "0")
+            st.rerun()
 
-    # ---- Quick links (circular tiles) ------------------------------------- #
-    st.markdown("### Quick Links")
+    # ---- Quick links (rounded tiles) ------------------------------------- #
+    ui.section("Quick links")
     links = [
         ("💳", "Pay Rent", "Pay Rent"),
         ("🛠️", "Submit Request", "Maintenance"),
@@ -114,22 +134,48 @@ def _dashboard(user, lease) -> None:
     with col1:
         with st.container(border=True):
             st.markdown("#### Your lease")
-            st.write(f"**Property:** {lease['property_name']}")
-            st.write(f"**Unit:** {lease['unit_label']} ({lease['city']})")
-            st.write(f"**Rent:** {utils.money(lease['rent_amount'])} / month")
-            st.write(f"**Due day:** {lease['due_day']} of each month")
-            st.write(f"**Lease ends:** {lease['end_date']}")
+            for label, value in [
+                ("Property", lease["property_name"]),
+                ("Unit", f"{lease['unit_label']} ({lease['city']})"),
+                ("Rent", f"{utils.money(lease['rent_amount'])} / month"),
+                ("Due day", f"{lease['due_day']} of each month"),
+                ("Lease ends", lease["end_date"]),
+            ]:
+                st.markdown(
+                    f"<div class='rh-row'><span class='rh-row-sub'>{label}</span>"
+                    f"<span class='rh-row-title'>{value}</span></div>",
+                    unsafe_allow_html=True,
+                )
     with col2:
         with st.container(border=True):
-            st.markdown(f"#### Open maintenance ({open_count})")
             open_t = [t for t in repo.tickets_for_tenant(user["id"])
                       if t["status"] not in ("Closed", "Resolved")]
+            st.markdown(f"#### Open maintenance ({len(open_t)})")
             if not open_t:
-                st.caption("No open requests.")
+                st.caption("No open requests. 🎉")
             for t in open_t:
-                st.write(f"🛠️ **{t['title']}** — {t['status']} ({t['priority']})")
+                st.markdown(
+                    f"<div class='rh-row'><span class='rh-row-title'>{t['title']}</span>"
+                    f"{ui.status_badge(t['status'])}</div>",
+                    unsafe_allow_html=True,
+                )
 
-    st.markdown("### Recent announcements")
+    # ---- Payment history chart ------------------------------------------- #
+    periods = utils.recent_periods(6)
+    totals = {p: 0.0 for p in periods}
+    for p in repo.payments_for_lease(lease["id"]):
+        per = p["period"] or (p["paid_at"][:7] if p["paid_at"] else None)
+        if per in totals:
+            totals[per] += float(p["amount"] or 0)
+    if any(v > 0 for v in totals.values()):
+        ui.section("Payments", "Last 6 months")
+        chart_df = pd.DataFrame(
+            {"Paid": [round(totals[p], 2) for p in periods]},
+            index=[utils.period_label(p) for p in periods],
+        )
+        st.bar_chart(chart_df, color="#5E6B4D", height=200)
+
+    ui.section("Recent announcements")
     anns = repo.announcements_for_property(lease["property_id"], limit=5)
     if not anns:
         st.caption("Nothing new.")
@@ -317,6 +363,12 @@ def _maintenance(user, lease) -> None:
     for t in tickets:
         prio_icon = {"Emergency": "🚨", "High": "🔴", "Med": "🟡", "Low": "⚪"}.get(t["priority"], "")
         with st.expander(f"{prio_icon} {t['title']} — {t['status']}"):
+            st.markdown(
+                ui.status_badge(t["status"]) + " " + ui.badge(t["priority"],
+                    {"Emergency": "red", "High": "red", "Med": "amber", "Low": "gray"}
+                    .get(t["priority"], "gray")),
+                unsafe_allow_html=True,
+            )
             st.write(t["description"] or "_No description._")
             st.caption(f"Category: {t['category']} · Priority: {t['priority']} · "
                        f"Submitted: {t['created_at'][:16]}")

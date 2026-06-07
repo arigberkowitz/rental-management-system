@@ -199,7 +199,27 @@ CREATE TABLE IF NOT EXISTS audit_log (
     detail    TEXT,
     timestamp TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS app_prefs (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
 """
+
+
+def get_pref(key: str, default: str | None = None) -> str | None:
+    """Read a small key/value preference (e.g. an autopay flag)."""
+    row = query_one("SELECT value FROM app_prefs WHERE key=?", (key,))
+    return row["value"] if row else default
+
+
+def set_pref(key: str, value: str) -> None:
+    """Upsert a small key/value preference."""
+    execute(
+        "INSERT INTO app_prefs (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, str(value)),
+    )
 
 
 def init_db() -> None:
