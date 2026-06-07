@@ -220,6 +220,28 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-ann .rh-ann-body {{ color:{INK}; line-height:1.5; }}
 .rh-ann .rh-ann-meta {{ color:{MUTED}; font-size:0.78rem; margin-top:6px; }}
 
+/* Property cards (manager Properties grid) */
+.rh-pcard {{
+    border:1px solid {CARD_BORDER}; border-radius:18px; overflow:hidden;
+    background:{SURFACE}; box-shadow:0 1px 2px rgba(30,35,29,0.04), 0 10px 28px rgba(30,35,29,0.05);
+    margin-bottom:14px; transition:transform .16s ease, box-shadow .16s ease;
+}}
+.rh-pcard:hover {{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(30,35,29,0.10); }}
+.rh-pcard-cover {{
+    height:96px; position:relative; display:flex; align-items:flex-end;
+    padding:12px 16px; color:#fff;
+}}
+.rh-pcard-cover .rh-pcard-city {{ font-size:0.8rem; font-weight:600; opacity:.92;
+    text-transform:uppercase; letter-spacing:0.06em; }}
+.rh-pcard-cover .rh-pcard-ico {{ position:absolute; top:12px; right:14px; opacity:.8; }}
+.rh-pcard-body {{ padding:14px 16px 16px; }}
+.rh-pcard-head {{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }}
+.rh-pcard-name {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.05rem; color:{INK}; line-height:1.2; }}
+.rh-pcard-addr {{ color:{MUTED}; font-size:0.82rem; margin-top:3px; }}
+.rh-pcard-stats {{ display:flex; gap:20px; margin-top:14px; padding-top:12px; border-top:1px solid {CARD_BORDER}; }}
+.rh-pcard-stat .v {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.15rem; color:{INK}; }}
+.rh-pcard-stat .l {{ color:{MUTED}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; }}
+
 /* Status timeline chips (maintenance ticket progress) */
 .rh-steps {{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }}
 .rh-step {{

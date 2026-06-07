@@ -122,18 +122,18 @@ def _properties(user) -> None:
     show_archived = st.toggle("Show archived", value=False)
     props = repo.list_properties(include_archived=show_archived)
 
-    rows = []
-    for p in props:
-        stt = repo.property_stats(p["id"])
-        rows.append({
-            "Property": p["name"], "City": p["city"], "Address": p["address"],
-            "Units": stt["units"], "Occupied": stt["occupied"],
-            "Occupancy": f"{stt['occupancy']*100:.0f}%",
-            "Monthly rent roll": utils.money(stt["rent_roll"]),
-            "Status": p["status"],
-        })
-    if rows:
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    if props:
+        cols = st.columns(3)
+        for i, p in enumerate(props):
+            stt = repo.property_stats(p["id"])
+            name = p["name"] + ("  (archived)" if p["status"] == "archived" else "")
+            cols[i % 3].markdown(
+                ui.property_card(
+                    name, p["city"], p["address"], stt["units"], stt["occupied"],
+                    stt["occupancy"], utils.money(stt["rent_roll"]),
+                ),
+                unsafe_allow_html=True,
+            )
 
     with st.expander("Add a property", icon=":material/add:"):
         with st.form("add_property", clear_on_submit=True):

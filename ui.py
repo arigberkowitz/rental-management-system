@@ -11,6 +11,18 @@ import html
 
 import streamlit as st
 
+import icons
+
+# Muted, premium cover gradients chosen deterministically per property.
+_COVERS = [
+    "linear-gradient(135deg,#5E6B4D,#3f4a34)",   # olive
+    "linear-gradient(135deg,#3E6F63,#264c43)",   # teal
+    "linear-gradient(135deg,#4A5568,#2d3340)",   # slate
+    "linear-gradient(135deg,#B5713F,#7d4a26)",   # clay
+    "linear-gradient(135deg,#566080,#363c54)",   # indigo
+    "linear-gradient(135deg,#6E5A78,#43354c)",   # plum
+]
+
 _BADGE_TONES = {"green", "amber", "red", "gray", "olive"}
 
 
@@ -62,6 +74,31 @@ _STATUS_TONE = {
 def status_badge(status: str) -> str:
     """Return a status pill HTML string with a sensible tone for the status."""
     return badge(status, _STATUS_TONE.get(status, "gray"))
+
+
+def property_card(name: str, city: str, address: str, units: int,
+                  occupied: int, occupancy: float, rent_roll: str) -> str:
+    """Return a premium property card (HTML string) for the Properties grid."""
+    cover = _COVERS[sum(ord(c) for c in name) % len(_COVERS)]
+    pct = round(occupancy * 100)
+    tone = "green" if pct >= 90 else ("amber" if pct >= 50 else "red")
+    e = html.escape
+    return (
+        f"<div class='rh-pcard'>"
+        f"<div class='rh-pcard-cover' style='background:{cover}'>"
+        f"<span class='rh-pcard-ico'>{icons.svg('building', 22)}</span>"
+        f"<span class='rh-pcard-city'>{e(city)}</span></div>"
+        f"<div class='rh-pcard-body'>"
+        f"<div class='rh-pcard-head'>"
+        f"<div><div class='rh-pcard-name'>{e(name)}</div>"
+        f"<div class='rh-pcard-addr'>{e(address)}</div></div>"
+        f"{badge(f'{pct}% occupied', tone)}</div>"
+        f"<div class='rh-pcard-stats'>"
+        f"<div class='rh-pcard-stat'><div class='v'>{units}</div><div class='l'>Units</div></div>"
+        f"<div class='rh-pcard-stat'><div class='v'>{occupied}</div><div class='l'>Occupied</div></div>"
+        f"<div class='rh-pcard-stat'><div class='v'>{e(rent_roll)}</div><div class='l'>Rent roll</div></div>"
+        f"</div></div></div>"
+    )
 
 
 def announcement_card(body: str, scope: str | None = None,

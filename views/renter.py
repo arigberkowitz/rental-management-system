@@ -109,6 +109,9 @@ def _dashboard(user, lease) -> None:
         if new_autopay != autopay_on:
             db.set_pref(autopay_key, "1" if new_autopay else "0")
             st.rerun()
+    if autopay_on and not paid_up:
+        st.caption(f"Autopay is on — your balance will be paid automatically on "
+                   f"{due.strftime('%b %d')}.")
 
     # ---- Quick links (rounded tiles) ------------------------------------- #
     ui.section("Quick links")
