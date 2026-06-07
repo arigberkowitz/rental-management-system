@@ -10,6 +10,7 @@ import streamlit as st
 import auth
 import repo
 import storage
+import ui
 import utils
 
 SECTIONS = [
@@ -70,14 +71,26 @@ def _dashboard(user) -> None:
     left, right = st.columns([1, 1])
 
     with left:
-        st.subheader("Collected vs. outstanding")
-        chart_df = pd.DataFrame(
-            {"amount": [s["collected"], s["outstanding"]]},
-            index=["Collected", "Outstanding"],
+        ui.section("Rent status", utils.period_label(utils.current_period()))
+        roll = repo.rent_roll()
+        order = ["Paid", "Partial", "Overdue", "Upcoming"]
+        counts = {k: 0 for k in order}
+        for r in roll:
+            if r["status"] in counts:
+                counts[r["status"]] += 1
+        badges = " ".join(
+            ui.badge(f"{counts[k]} {k.lower()}",
+                     {"Paid": "green", "Partial": "amber",
+                      "Overdue": "red", "Upcoming": "gray"}[k])
+            for k in order
         )
-        st.bar_chart(chart_df, color="#4C9A2A")
+        st.markdown(badges, unsafe_allow_html=True)
+        st.bar_chart(
+            pd.DataFrame({"leases": [counts[k] for k in order]}, index=order),
+            color="#5E6B4D", height=200,
+        )
 
-        st.subheader("Open maintenance tickets")
+        ui.section("Open maintenance tickets")
         oc = s["open_tickets"]
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("🚨 Emergency", oc["Emergency"])
@@ -86,14 +99,18 @@ def _dashboard(user) -> None:
         m4.metric("⚪ Low", oc["Low"])
 
     with right:
-        st.subheader("Needs attention")
+        ui.section("Needs attention")
         items = repo.needs_attention()
         if not items:
             st.success("All clear — nothing needs attention right now.")
+        tone = {"Overdue rent": "red", "Partial rent": "amber",
+                "New ticket": "olive", "Lease expiring": "gray"}
         for it in items[:18]:
-            icon = {"Overdue rent": "🔴", "Partial rent": "🟡", "New ticket": "🛠️",
-                    "Lease expiring": "📄"}.get(it["kind"], "•")
-            st.write(f"{icon} **{it['kind']}** — {it['text']}")
+            st.markdown(
+                f"<div class='rh-row'><span class='rh-row-sub'>{it['text']}</span>"
+                f"{ui.badge(it['kind'], tone.get(it['kind'], 'gray'))}</div>",
+                unsafe_allow_html=True,
+            )
 
 
 # --------------------------------------------------------------------------- #
@@ -246,9 +263,14 @@ def _manage_property(prop, user) -> None:
 def _tenants(user) -> None:
     st.header("Tenants & leases")
     leases = repo.active_leases()
+    query = st.text_input("🔎 Search", placeholder="Filter by property, unit, or tenant…",
+                          label_visibility="collapsed").strip().lower()
     rows = []
     for l in leases:
         tenants = ", ".join(t["name"] for t in repo.lease_tenants(l["id"])) or "—"
+        haystack = f"{l['property_name']} {l['unit_label']} {tenants}".lower()
+        if query and query not in haystack:
+            continue
         rows.append({
             "Property": l["property_name"], "Unit": l["unit_label"], "Tenant(s)": tenants,
             "Rent": utils.money(l["rent_amount"]), "Due day": l["due_day"],
@@ -256,7 +278,11 @@ def _tenants(user) -> None:
             "Balance": utils.money(repo.lease_balance(l["id"])),
         })
     if rows:
+        st.caption(f"{len(rows)} of {len(leases)} lease(s)"
+                   + (f" matching “{query}”" if query else ""))
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    elif query:
+        st.info(f"No leases match “{query}”.")
     else:
         st.info("No active leases yet.")
 
