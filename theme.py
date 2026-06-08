@@ -114,22 +114,24 @@ hr {{ border-color: {CARD_BORDER}; }}
 .stTabs [aria-selected="true"] {{ color: {PRIMARY}; }}
 .stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; height: 3px; }}
 
-/* ---- Clickable property card: overlay a transparent button across the whole
-       card so clicking anywhere on it opens the property (no logout — it's an
-       in-session rerun, not a page navigation). ---- */
-[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) {{
-    position: relative;
+/* ---- Clickable property card -------------------------------------------- #
+   Each card lives in a keyed container (class st-key-pcard_<id>). We overlay a
+   transparent Streamlit button across the whole container so a click anywhere
+   opens the property. It's an in-session rerun (not a page navigation), so the
+   user stays logged in. ------------------------------------------------------ */
+[class*="st-key-pcard_"] {{ position: relative; }}
+[class*="st-key-pcard_"] [data-testid="stButton"] {{
+    position: absolute; inset: 0; margin: 0; z-index: 5; height: 100%;
 }}
-[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) [data-testid="stButton"] {{
-    position: absolute; inset: 0; margin: 0; z-index: 4;
+[class*="st-key-pcard_"] [data-testid="stButton"] > button {{
+    width: 100%; height: 100%; min-height: 100%;
+    opacity: 0; border: none; background: transparent; cursor: pointer;
 }}
-[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) [data-testid="stButton"] > button {{
-    width: 100%; height: 100%; opacity: 0; border: none; background: transparent; cursor: pointer;
-}}
-/* keep the hover lift even though the button sits on top */
-[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard):hover .rh-pcard {{
+/* keep the card's hover lift even though the click target sits on top */
+[class*="st-key-pcard_"]:hover .rh-pcard {{
     transform: translateY(-2px); box-shadow: 0 12px 30px rgba(30,35,29,0.10);
 }}
+[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; }}
 
 /* ---- Metric cards ---- */
 [data-testid="stMetric"] {{

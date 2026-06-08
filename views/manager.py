@@ -151,9 +151,10 @@ def _properties(user) -> None:
                 stt["occupancy"], utils.money(stt["rent_roll"]),
             )
             with cols[i % 3]:
-                # The whole card is clickable: a transparent button is overlaid
-                # across the card via CSS (kept in-session so login is preserved).
-                with st.container():
+                # The whole card is clickable: the keyed container gets a stable
+                # `st-key-pcard_<id>` class; CSS overlays a transparent button
+                # across it. Stays in-session (no reload), so login is preserved.
+                with st.container(key=f"pcard_{p['id']}"):
                     st.markdown(card, unsafe_allow_html=True)
                     st.button(f"Open {p['name']}", key=f"open_{p['id']}",
                               use_container_width=True,
