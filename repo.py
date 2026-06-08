@@ -405,6 +405,73 @@ def delinquencies(period=None):
 
 
 # --------------------------------------------------------------------------- #
+# Automated late fees
+# --------------------------------------------------------------------------- #
+
+LATE_FEE_PREF = "late_fees_auto"        # "1" on (default) / "0" off
+LATE_FEE_GRACE_PREF = "late_fees_grace_days"
+
+
+def late_fees_enabled() -> bool:
+    return db.get_pref(LATE_FEE_PREF, "1") == "1"
+
+
+def set_late_fees_enabled(on: bool) -> None:
+    db.set_pref(LATE_FEE_PREF, "1" if on else "0")
+
+
+def late_fee_grace_days() -> int:
+    try:
+        return int(db.get_pref(LATE_FEE_GRACE_PREF, "3"))
+    except (TypeError, ValueError):
+        return 3
+
+
+def apply_late_fees(actor_id=None, period=None) -> int:
+    """Charge a one-time late fee on overdue, unpaid leases for the period.
+
+    Idempotent: at most one ``late_fee`` charge per lease per period. Respects
+    the manager toggle and a grace period. Returns how many fees were applied.
+    """
+    if not late_fees_enabled():
+        return 0
+    period = period or utils.current_period()
+    grace = late_fee_grace_days()
+    applied = 0
+    for lease in active_leases():
+        rent_charge = db.query_one(
+            "SELECT id FROM charges WHERE lease_id=? AND period=? AND type='rent'",
+            (lease["id"], period),
+        )
+        if not rent_charge:
+            continue
+        due = utils.due_date_for(period, lease["due_day"])
+        if (utils.today() - due).days <= grace:
+            continue  # still within the grace window
+        ps = period_status(lease["id"], period, lease["due_day"])
+        if ps["balance"] <= 0:
+            continue  # paid in full
+        already = db.query_one(
+            "SELECT id FROM charges WHERE lease_id=? AND period=? AND type='late_fee'",
+            (lease["id"], period),
+        )
+        if already:
+            continue
+        fee = lease["late_fee_amount"] or 0
+        if fee <= 0:
+            continue
+        db.execute(
+            "INSERT INTO charges (lease_id, type, amount, period, due_date) "
+            "VALUES (?, 'late_fee', ?, ?, ?)",
+            (lease["id"], fee, period, due.isoformat()),
+        )
+        db.audit(actor_id, "late_fee", "lease", lease["id"],
+                 f"auto late fee ${fee:.2f} for {period}")
+        applied += 1
+    return applied
+
+
+# --------------------------------------------------------------------------- #
 # Dashboard aggregates
 # --------------------------------------------------------------------------- #
 

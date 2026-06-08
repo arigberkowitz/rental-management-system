@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 
 import auth
 import lease_pdf
+import notifications
 import repo
 import storage
 import ui
@@ -25,6 +26,7 @@ SECTIONS = [
     "Maintenance",
     "Reports",
     "Announcements",
+    "Settings",
 ]
 
 CATEGORIES = ["plumbing", "electrical", "HVAC", "appliance", "other"]
@@ -51,6 +53,8 @@ def render(user, section: str) -> None:
         _reports(user)
     elif section == "Announcements":
         _announcements(user)
+    elif section == "Settings":
+        _settings(user)
 
 
 # --------------------------------------------------------------------------- #
@@ -58,7 +62,7 @@ def render(user, section: str) -> None:
 # --------------------------------------------------------------------------- #
 
 def _dashboard(user) -> None:
-    st.header("Portfolio dashboard")
+    st.header("Portfolio Dashboard")
     st.caption(f"Current period: {utils.period_label(utils.current_period())}")
     s = repo.portfolio_summary()
 
@@ -75,7 +79,7 @@ def _dashboard(user) -> None:
     left, right = st.columns([1, 1])
 
     with left:
-        ui.section("Rent status", utils.period_label(utils.current_period()))
+        ui.section("Rent Status", utils.period_label(utils.current_period()))
         roll = repo.rent_roll()
         order = ["Paid", "Partial", "Overdue", "Upcoming"]
         counts = {k: 0 for k in order}
@@ -94,7 +98,7 @@ def _dashboard(user) -> None:
             color="#5E6B4D", height=200,
         )
 
-        ui.section("Open maintenance tickets")
+        ui.section("Open Maintenance Tickets")
         oc = s["open_tickets"]
         prio_cards = "".join(
             f"<div class='rh-prio-card'><span class='dot {tone}'></span>"
@@ -105,7 +109,7 @@ def _dashboard(user) -> None:
         st.markdown(f"<div class='rh-prio'>{prio_cards}</div>", unsafe_allow_html=True)
 
     with right:
-        ui.section("Needs attention")
+        ui.section("Needs Attention")
         items = repo.needs_attention()
         if not items:
             st.success("All clear — nothing needs attention right now.")
@@ -128,7 +132,7 @@ def _open_property(pid) -> None:
 
 
 def _properties(user) -> None:
-    st.header("Properties & units")
+    st.header("Properties & Units")
 
     # Clicking a property's button opens its detail view directly (in-session
     # rerun, so login is preserved — a full-page link would reset session state).
@@ -350,13 +354,13 @@ def _show_lease_pdf(fname: str, data: bytes, heading: str) -> None:
 
 
 def _tenants(user) -> None:
-    st.header("Tenants & leases")
+    st.header("Tenants & Leases")
 
     # Freshly created lease: show its generated PDF (preview + download) up top.
     pending = st.session_state.pop("new_lease_pdf", None)
     if pending:
         st.success("Lease created and unit marked occupied. Your lease document is ready.")
-        _show_lease_pdf(pending[0], pending[1], "Lease document")
+        _show_lease_pdf(pending[0], pending[1], "Lease Document")
         st.divider()
 
     leases = repo.active_leases()
@@ -390,7 +394,7 @@ def _tenants(user) -> None:
 
     # Per-tenant lease document — download each existing lease's PDF directly.
     if filtered:
-        with st.expander(f"Lease documents ({len(filtered)})", icon=":material/description:"):
+        with st.expander(f"Lease Documents ({len(filtered)})", icon=":material/description:"):
             for l, tnames in filtered:
                 who = ", ".join(tnames) or "—"
                 c1, c2 = st.columns([3, 1])
@@ -404,7 +408,7 @@ def _tenants(user) -> None:
     col_new, col_manage = st.columns(2)
 
     with col_new:
-        st.subheader("New lease")
+        st.subheader("New Lease")
         vacants = repo.vacant_units()
         tenants_all = repo.list_tenants()
         if not vacants:
@@ -448,7 +452,7 @@ def _tenants(user) -> None:
                         st.rerun()
 
     with col_manage:
-        st.subheader("Manage / end a lease")
+        st.subheader("Manage / End a Lease")
         if leases:
             lmap = {f"{l['property_name']} {l['unit_label']} — "
                     f"{', '.join(t['name'] for t in repo.lease_tenants(l['id'])) or '—'}": l
@@ -494,7 +498,7 @@ def _tenants(user) -> None:
 # --------------------------------------------------------------------------- #
 
 def _rent(user) -> None:
-    st.header("Rent & payments")
+    st.header("Rent & Payments")
     tab_roll, tab_ledger, tab_behind, tab_record = st.tabs(
         ["Rent roll", "Payment ledger", "What's behind", "Record a payment"]
     )
@@ -567,6 +571,11 @@ def _rent(user) -> None:
                 tid = tenants[0]["id"] if tenants else None
                 repo.record_payment(lease["id"], float(amount), method,
                                     tenant_id=tid, period=period, recorded_by=user["id"])
+                if tenants and tenants[0]["email"]:
+                    notifications.payment_receipt(
+                        tenants[0]["email"], tenants[0]["name"],
+                        utils.money_cents(amount),
+                        f"{lease['property_name']} {lease['unit_label']}", method)
                 st.success(f"Recorded {utils.money_cents(amount)} ({method}).")
                 st.rerun()
 
@@ -576,7 +585,7 @@ def _rent(user) -> None:
 # --------------------------------------------------------------------------- #
 
 def _maintenance(user) -> None:
-    st.header("Maintenance / work orders")
+    st.header("Maintenance / Work Orders")
     props = repo.list_properties()
     c1, c2, c3 = st.columns(3)
     prop_opt = ["All"] + [p["name"] for p in props]
@@ -630,11 +639,18 @@ def _manager_ticket_detail(t, user) -> None:
         note = st.text_area("Add an update / note")
         visible = st.checkbox("Visible to tenant", value=True)
         if st.form_submit_button("Save", type="primary"):
+            status_changed = status != t["status"]
             repo.update_ticket(t["id"], status=status, priority=priority,
                                assignee_id=amap[assignee], cost=float(cost),
                                actor_id=user["id"])
             if note.strip():
                 repo.add_ticket_update(t["id"], user["id"], note.strip(), visible)
+            if status_changed:
+                rep = repo.get_user(t["reporter_id"])
+                if rep and rep["email"]:
+                    notifications.ticket_status_email(
+                        rep["email"], rep["name"], t["title"], status,
+                        f"{t['property_name']} {t['unit_label']}")
             st.success("Ticket updated.")
             st.rerun()
 
@@ -777,3 +793,65 @@ def _announcements(user) -> None:
         scope = a["property_name"] or "All tenants"
         ui.announcement_card(a["body"], scope=scope,
                              meta=f"{a['created_at'][:16]} · by {a['author_name']}")
+
+
+# --------------------------------------------------------------------------- #
+# Settings (owner / manager automation controls)
+# --------------------------------------------------------------------------- #
+
+def _send_rent_reminders() -> int:
+    sent = 0
+    period = utils.current_period()
+    for r in repo.delinquencies():
+        due = utils.due_date_for(period, r["due_day"])
+        prop_unit = f"{r['property']} {r['unit']}"
+        for t in repo.lease_tenants(r["lease_id"]):
+            if t["email"] and notifications.rent_reminder(
+                t["email"], t["name"], utils.money(r["balance"]),
+                due.strftime("%b %d"), prop_unit):
+                sent += 1
+    return sent
+
+
+def _settings(user) -> None:
+    st.header("Settings")
+    st.caption("Owner / manager controls. Each automation can be turned off here.")
+
+    ui.section("Automated Late Fees")
+    lf_on = repo.late_fees_enabled()
+    new_lf = st.toggle(
+        "Automatically charge a late fee when rent is overdue",
+        value=lf_on,
+        help="Applies each lease's late-fee amount once per period, after the "
+             "grace window. Turn off anytime — existing fees are not removed.",
+    )
+    if new_lf != lf_on:
+        repo.set_late_fees_enabled(new_lf)
+        st.rerun()
+    st.caption(f"Grace period: {repo.late_fee_grace_days()} days after the due date "
+               "before a fee is applied.")
+    if st.button("Run late-fee check now", icon=":material/bolt:"):
+        n = repo.apply_late_fees(actor_id=user["id"])
+        if n:
+            st.success(f"Applied {n} late fee(s).")
+        else:
+            st.info("No late fees were due.")
+
+    st.divider()
+    ui.section("Email Notifications")
+    if not notifications.is_configured():
+        st.info("Email isn't set up yet. Add a `RESEND_API_KEY` in your Streamlit "
+                "app secrets to enable payment receipts, maintenance updates, and "
+                "rent reminders.")
+    nt_on = notifications.enabled()
+    new_nt = st.toggle(
+        "Send automated emails (receipts, maintenance updates, reminders)",
+        value=nt_on, disabled=not notifications.is_configured(),
+    )
+    if new_nt != nt_on:
+        notifications.set_enabled(new_nt)
+        st.rerun()
+    if st.button("Send rent reminders now", icon=":material/mail:",
+                 disabled=not notifications.can_send()):
+        sent = _send_rent_reminders()
+        st.success(f"Sent {sent} reminder(s).")

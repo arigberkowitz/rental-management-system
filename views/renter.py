@@ -8,6 +8,7 @@ import streamlit as st
 import auth
 import db
 import icons
+import notifications
 import payments
 import repo
 import storage
@@ -118,7 +119,7 @@ def _dashboard(user, lease) -> None:
 
     # ---- Quick links (rounded tiles) ------------------------------------- #
     st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
-    ui.section("Quick links")
+    ui.section("Quick Links")
     links = [
         ("card", "Pay Rent", "Pay Rent"),
         ("wrench", "Submit Request", "Maintenance"),
@@ -142,7 +143,7 @@ def _dashboard(user, lease) -> None:
     col1, col2 = st.columns(2)
     with col1:
         with st.container(border=True):
-            st.markdown("#### Your lease")
+            st.markdown("#### Your Lease")
             for label, value in [
                 ("Property", lease["property_name"]),
                 ("Unit", f"{lease['unit_label']} ({lease['city']})"),
@@ -159,7 +160,7 @@ def _dashboard(user, lease) -> None:
         with st.container(border=True):
             open_t = [t for t in repo.tickets_for_tenant(user["id"])
                       if t["status"] not in ("Closed", "Resolved")]
-            st.markdown(f"#### Open maintenance ({len(open_t)})")
+            st.markdown(f"#### Open Maintenance ({len(open_t)})")
             if not open_t:
                 st.caption("No open requests.")
             for t in open_t:
@@ -184,7 +185,7 @@ def _dashboard(user, lease) -> None:
         )
         st.bar_chart(chart_df, color="#5E6B4D", height=200)
 
-    ui.section("Recent announcements")
+    ui.section("Recent Announcements")
     anns = repo.announcements_for_property(lease["property_id"], limit=5)
     if not anns:
         st.caption("Nothing new.")
@@ -197,7 +198,7 @@ def _dashboard(user, lease) -> None:
 # --------------------------------------------------------------------------- #
 
 def _pay(user, lease) -> None:
-    st.header("Pay rent")
+    st.header("Pay Rent")
     if not lease:
         _no_lease()
         return
@@ -261,6 +262,11 @@ def _checkout(user, lease, balance) -> None:
                 last4=result.last4, period=utils.current_period(),
                 recorded_by=user["id"],
             )
+            me = repo.get_user(user["id"])
+            if me and me["email"]:
+                notifications.payment_receipt(
+                    me["email"], me["name"], utils.money_cents(amount),
+                    f"{lease['property_name']} {lease['unit_label']}", "card")
             st.success(f"Payment of {utils.money_cents(amount)} succeeded!")
             with st.container(border=True):
                 st.markdown("#### Receipt")
@@ -305,7 +311,7 @@ def _history(user, lease) -> None:
     fees = [c for c in repo.attachments_for("lease", lease["id"])]  # noqa: F841
     late = _late_fee_charges(lease["id"])
     if late:
-        st.subheader("Late fees applied")
+        st.subheader("Late Fees Applied")
         for f in late:
             st.write(f"• {utils.period_label(f['period'])}: {utils.money_cents(f['amount'])} "
                      f"— applied because rent was past the due date.")
@@ -340,7 +346,7 @@ def _late_fee_charges(lease_id):
 # --------------------------------------------------------------------------- #
 
 def _maintenance(user, lease) -> None:
-    st.header("Maintenance requests")
+    st.header("Maintenance Requests")
     if not lease:
         _no_lease()
         return
@@ -426,8 +432,8 @@ def _status_timeline(t) -> None:
 # --------------------------------------------------------------------------- #
 
 def _documents(user, lease) -> None:
-    st.header("Documents & profile")
-    st.subheader("Your documents")
+    st.header("Documents & Profile")
+    st.subheader("Your Documents")
     if lease:
         docs = repo.attachments_for("lease", lease["id"])
         if not docs:

@@ -14,6 +14,7 @@ import db
 import hero
 import icons
 import repo
+import session
 import theme
 from views import manager, renter
 
@@ -33,7 +34,7 @@ MANAGER_ICONS = {
     "Dashboard": ":material/dashboard:", "Properties & Units": ":material/apartment:",
     "Tenants & Leases": ":material/group:", "Rent & Payments": ":material/payments:",
     "Maintenance": ":material/build:", "Reports": ":material/bar_chart:",
-    "Announcements": ":material/campaign:",
+    "Announcements": ":material/campaign:", "Settings": ":material/settings:",
 }
 
 
@@ -49,14 +50,67 @@ def _bootstrap():
 
 _bootstrap()
 
+# Apply any due late fees once per session (guarded — never breaks the app).
+if "_late_fee_checked" not in st.session_state:
+    try:
+        repo.apply_late_fees()
+    except Exception:
+        pass
+    st.session_state["_late_fee_checked"] = True
+
+
+_LOGIN_HERO = """
+<style>
+.rh-lhero{position:relative;margin:-1rem 0 1.5rem;padding:0 0 0.5rem;text-align:center;overflow:hidden}
+.rh-lhero::before{content:'';position:absolute;top:-60%;left:50%;transform:translateX(-50%);
+  width:60rem;height:60rem;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 50% 40%, rgba(94,107,77,0.12), rgba(94,107,77,0.03) 50%, transparent 72%)}
+.rh-lnav{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;
+  max-width:1040px;margin:0 auto;padding:14px 8px 18px;border-bottom:1px dashed #E7E7E0}
+.rh-lbrand{display:flex;align-items:center;gap:9px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-weight:800;font-size:18px;letter-spacing:-0.02em;color:#1E231D}
+.rh-lmk{width:28px;height:28px;border-radius:8px;background:#5E6B4D;color:#fff;display:flex;
+  align-items:center;justify-content:center;font-size:14px}
+.rh-lmenu{display:flex;gap:26px;font-size:14px;color:#6B7167}
+.rh-lbody{position:relative;z-index:1;padding:46px 16px 8px}
+.rh-lpill{display:inline-block;font-size:12.5px;font-weight:600;color:#4A5540;background:#EDF1E6;
+  border:1px solid #DDE4D0;border-radius:999px;padding:6px 14px;margin-bottom:20px}
+.rh-lhero h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:46px;line-height:1.05;font-weight:800;
+  letter-spacing:-0.03em;color:#1E231D;margin:0 auto;max-width:16ch}
+.rh-lhero p{font-size:18px;color:#6B7167;max-width:48ch;margin:18px auto 4px;line-height:1.5}
+.rh-lcloud{text-align:center;margin:30px auto 4px;padding-top:24px;border-top:1px solid #E7E7E0;max-width:880px}
+.rh-lcloud-h{font-size:14px;color:#6B7167;font-weight:600}
+.rh-llogos{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:24px 40px;margin-top:22px}
+.rh-llogos span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:17px;
+  color:#A9ADA2;letter-spacing:-0.02em}
+@media(max-width:760px){.rh-lmenu{display:none}.rh-lhero h1{font-size:34px}.rh-lhero p{font-size:16px}}
+</style>
+<div class="rh-lhero">
+  <div class="rh-lnav">
+    <div class="rh-lbrand"><span class="rh-lmk">&#8962;</span> RentHarbor</div>
+    <div class="rh-lmenu"><span>Properties</span><span>Tenants</span><span>Pricing</span><span>About</span></div>
+  </div>
+  <div class="rh-lbody">
+    <span class="rh-lpill">New &middot; Automated Late Fees &amp; Rent Reminders</span>
+    <h1>Property Management, on autopilot</h1>
+    <p>Rent roll, payments, maintenance, and leases &mdash; every property in one calm dashboard. Sign in to your portal below.</p>
+  </div>
+</div>
+"""
+
+_LOGIN_CLOUD = """
+<div class="rh-lcloud">
+  <div class="rh-lcloud-h">Trusted by Independent Landlords and Property Teams</div>
+  <div class="rh-llogos">
+    <span>Sausalito Living</span><span>BayHaus</span><span>Marin Realty</span>
+    <span>OakField</span><span>Harbor Co.</span>
+  </div>
+</div>
+"""
+
 
 def login_screen() -> None:
-    hero.render_login_hero()
-    st.markdown(
-        "<p style='text-align:center;color:#6B7167;margin:22px 0 6px;font-size:1.02rem'>"
-        "Sign in to your portal</p>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(_LOGIN_HERO, unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         with st.container(border=True):
@@ -69,6 +123,7 @@ def login_screen() -> None:
                     user = auth.authenticate(username, password)
                     if user:
                         auth.login(user)
+                        session.issue(user)  # remember across reloads (guarded)
                         st.rerun()
                     else:
                         st.error("Invalid username or password.")
@@ -85,6 +140,8 @@ def login_screen() -> None:
 | `linh` | `tenant123` | Renter |
 """
             )
+
+    st.markdown(_LOGIN_CLOUD, unsafe_allow_html=True)
 
 
 def _sidebar_brand(user, is_manager) -> None:
@@ -125,6 +182,7 @@ def portal() -> None:
         st.divider()
         st.caption(f"Signed in as **{user['name']}** · {user['role'].title()}")
         if st.button("Log out", use_container_width=True):
+            session.clear()  # drop the persistent cookie too
             auth.logout()
             st.rerun()
 
@@ -133,6 +191,12 @@ def portal() -> None:
     else:
         renter.render(user, section)
 
+
+# Restore a signed-in user from the persistent cookie (guarded; no-op if none).
+if not auth.current_user():
+    _restored = session.restore()
+    if _restored:
+        st.session_state["user"] = _restored
 
 if auth.current_user():
     portal()
