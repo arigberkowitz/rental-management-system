@@ -71,7 +71,7 @@ _LOGIN_HERO = """
   font-weight:800;font-size:18px;letter-spacing:-0.02em;color:#1E231D}
 .rh-lmk{width:28px;height:28px;border-radius:8px;background:#5E6B4D;color:#fff;display:flex;
   align-items:center;justify-content:center;font-size:14px}
-.rh-lmenu{display:flex;gap:26px;font-size:14px;color:#6B7167}
+.rh-lnav-tag{font-size:13px;color:#6B7167;font-weight:600;letter-spacing:.01em}
 .rh-lbody{position:relative;z-index:1;padding:46px 16px 8px}
 .rh-lpill{display:inline-block;font-size:12.5px;font-weight:600;color:#4A5540;background:#EDF1E6;
   border:1px solid #DDE4D0;border-radius:999px;padding:6px 14px;margin-bottom:20px}
@@ -83,12 +83,12 @@ _LOGIN_HERO = """
 .rh-llogos{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:24px 40px;margin-top:22px}
 .rh-llogos span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:17px;
   color:#A9ADA2;letter-spacing:-0.02em}
-@media(max-width:760px){.rh-lmenu{display:none}.rh-lhero h1{font-size:34px}.rh-lhero p{font-size:16px}}
+@media(max-width:760px){.rh-lnav-tag{display:none}.rh-lhero h1{font-size:34px}.rh-lhero p{font-size:16px}}
 </style>
 <div class="rh-lhero">
   <div class="rh-lnav">
     <div class="rh-lbrand"><span class="rh-lmk">&#8962;</span> RentHarbor</div>
-    <div class="rh-lmenu"><span>Properties</span><span>Tenants</span><span>Pricing</span><span>About</span></div>
+    <div class="rh-lnav-tag">Property Management Portal</div>
   </div>
   <div class="rh-lbody">
     <span class="rh-lpill">New &middot; Automated Late Fees &amp; Rent Reminders</span>
@@ -96,6 +96,43 @@ _LOGIN_HERO = """
     <p>Rent roll, payments, maintenance, and leases &mdash; every property in one calm dashboard. Sign in to your portal below.</p>
   </div>
 </div>
+"""
+
+_LOGIN_SHOWCASE = """
+<style>
+.rh-lshow{margin:40px auto 0;max-width:1100px;-webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 60%,transparent 100%);perspective:1300px;overflow:hidden}
+.rh-lstage{transform:rotateX(22deg);transform-origin:50% 0;margin:0 auto;width:940px;max-width:94%}
+.rh-lwin{background:#fff;border:1px solid #E7E7E0;border-radius:16px;overflow:hidden;
+  box-shadow:0 50px 90px rgba(30,35,29,0.16)}
+.rh-lwin-top{height:88px;background:linear-gradient(135deg,#5E6B4D,#3f4a34);display:flex;align-items:flex-end;
+  padding:14px 20px;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:17px;letter-spacing:.02em}
+.rh-lwin-body{padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rh-ltile{border:1px solid #E7E7E0;border-radius:12px;padding:13px 15px}
+.rh-ltile .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#6B7167;font-weight:600}
+.rh-ltile .v{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:22px;margin-top:4px;color:#1E231D}
+.rh-ltile .v.g{color:#2E7D55}
+.rh-lpcards{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:2px}
+.rh-lpc{border:1px solid #E7E7E0;border-radius:14px;overflow:hidden}
+.rh-lpc .cov{height:58px}
+.rh-lpc .bd{padding:11px 14px}
+.rh-lpc .nm{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;color:#1E231D}
+.rh-lpc .ad{font-size:11px;color:#6B7167;margin-top:2px}
+</style>
+<div class="rh-lshow"><div class="rh-lstage"><div class="rh-lwin">
+  <div class="rh-lwin-top">RENTHARBOR &middot; Portfolio</div>
+  <div class="rh-lwin-body">
+    <div class="rh-ltile"><div class="l">Rent Expected</div><div class="v">$147,750</div></div>
+    <div class="rh-ltile"><div class="l">Collected</div><div class="v g">92%</div></div>
+    <div class="rh-ltile"><div class="l">Outstanding</div><div class="v">$11,460</div></div>
+    <div class="rh-ltile"><div class="l">Occupancy</div><div class="v">88%</div></div>
+    <div class="rh-lpcards">
+      <div class="rh-lpc"><div class="cov" style="background:linear-gradient(135deg,#5E6B4D,#3f4a34)"></div><div class="bd"><div class="nm">Dolores Court</div><div class="ad">500 Dolores St &middot; 75% occupied</div></div></div>
+      <div class="rh-lpc"><div class="cov" style="background:linear-gradient(135deg,#6E5A78,#43354c)"></div><div class="bd"><div class="nm">Marina Heights</div><div class="ad">1450 Bay St &middot; 92% occupied</div></div></div>
+      <div class="rh-lpc"><div class="cov" style="background:linear-gradient(135deg,#3E6F63,#264c43)"></div><div class="bd"><div class="nm">Pacific View Flats</div><div class="ad">2200 Lombard St &middot; 100% occupied</div></div></div>
+    </div>
+  </div>
+</div></div></div>
 """
 
 _LOGIN_CLOUD = """
@@ -141,6 +178,7 @@ def login_screen() -> None:
 """
             )
 
+    st.markdown(_LOGIN_SHOWCASE, unsafe_allow_html=True)
     st.markdown(_LOGIN_CLOUD, unsafe_allow_html=True)
 
 
