@@ -120,18 +120,21 @@ hr {{ border-color: {CARD_BORDER}; }}
    opens the property. It's an in-session rerun (not a page navigation), so the
    user stays logged in. ------------------------------------------------------ */
 [class*="st-key-pcard_"] {{ position: relative; }}
+/* The card is visual only — let clicks pass THROUGH it to the button beneath,
+   so a click anywhere on the card registers regardless of paint order. */
+[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; pointer-events: none; }}
+/* The transparent button fills the whole card area and catches the clicks. */
 [class*="st-key-pcard_"] [data-testid="stButton"] {{
-    position: absolute; inset: 0; margin: 0; z-index: 5; height: 100%;
+    position: absolute; inset: 0; margin: 0; z-index: 1; height: 100%;
 }}
 [class*="st-key-pcard_"] [data-testid="stButton"] > button {{
     width: 100%; height: 100%; min-height: 100%;
     opacity: 0; border: none; background: transparent; cursor: pointer;
 }}
-/* keep the card's hover lift even though the click target sits on top */
+/* keep the card's hover lift */
 [class*="st-key-pcard_"]:hover .rh-pcard {{
     transform: translateY(-2px); box-shadow: 0 12px 30px rgba(30,35,29,0.10);
 }}
-[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; }}
 
 /* ---- Metric cards ---- */
 [data-testid="stMetric"] {{
