@@ -156,7 +156,7 @@ def _properties(user) -> None:
                 # across it. Stays in-session (no reload), so login is preserved.
                 with st.container(key=f"pcard_{p['id']}"):
                     st.markdown(card, unsafe_allow_html=True)
-                    st.button(f"Open {p['name']}", key=f"open_{p['id']}",
+                    st.button(f"Open {p['name']}  →", key=f"open_{p['id']}",
                               use_container_width=True,
                               on_click=_open_property, args=(p["id"],))
 

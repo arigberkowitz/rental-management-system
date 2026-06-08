@@ -114,31 +114,31 @@ hr {{ border-color: {CARD_BORDER}; }}
 .stTabs [aria-selected="true"] {{ color: {PRIMARY}; }}
 .stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; height: 3px; }}
 
-/* ---- Clickable property card -------------------------------------------- #
-   Each card lives in a keyed container (class st-key-pcard_<id>). The button is
-   a NORMAL in-flow element given a real height — so its clickable area is
-   guaranteed by layout (no absolute-coverage guessing). The card visual is laid
-   absolutely on TOP of the button and made click-through, so a click anywhere on
-   the card hits the button. In-session rerun, so login is preserved. --------- */
-[class*="st-key-pcard_"] {{ position: relative; }}
-/* The visual card sits on top, but ignores clicks (they pass to the button).
-   Target the container that actually holds the card via :has, and also any
-   first-child fallback, so the card is always click-through and on top. */
-[class*="st-key-pcard_"] [data-testid="stElementContainer"]:has(.rh-pcard),
-[class*="st-key-pcard_"] [data-testid="stElementContainer"]:first-child {{
-    position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
+/* ---- Property card with an attached "Open" footer bar ------------------- #
+   Each card lives in a keyed container (class st-key-pcard_<id>). The card HTML
+   renders the visual; directly beneath it a real, visible Streamlit button is
+   styled as a footer bar fused to the card's bottom edge. It's an ordinary
+   button (guaranteed clickable) and runs in-session, so login is preserved. -- */
+[class*="st-key-pcard_"] .rh-pcard {{
+    margin-bottom: 0;
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    border-bottom: none;
 }}
-[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; pointer-events: none; }}
-/* The button is the real clickable area: full width, card-height, invisible. */
-[class*="st-key-pcard_"] [data-testid="stButton"] {{ margin: 0; }}
+[class*="st-key-pcard_"] [data-testid="stButton"] {{ margin-top: 0; }}
 [class*="st-key-pcard_"] [data-testid="stButton"] > button {{
-    width: 100%; min-height: 268px; height: 268px;
-    opacity: 0; border: none; background: transparent; cursor: pointer;
+    width: 100%;
+    border: 1px solid {CARD_BORDER};
+    border-top: 1px solid {CARD_BORDER};
+    border-radius: 0 0 18px 18px;
+    background: {PRIMARY_SOFT}; color: {PRIMARY_DARK};
+    font-weight: 700; padding: 11px;
+    transition: background .14s ease, color .14s ease;
 }}
-/* keep the card's hover lift */
-[class*="st-key-pcard_"]:hover .rh-pcard {{
-    transform: translateY(-2px); box-shadow: 0 12px 30px rgba(30,35,29,0.10);
+[class*="st-key-pcard_"] [data-testid="stButton"] > button:hover {{
+    background: {PRIMARY}; color: #FFFFFF; border-color: {PRIMARY};
+    transform: none; box-shadow: none;
 }}
+[class*="st-key-pcard_"] {{ margin-bottom: 16px; }}
 
 /* ---- Metric cards ---- */
 [data-testid="stMetric"] {{
