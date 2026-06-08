@@ -32,8 +32,10 @@ RENTER_ICONS = {
 }
 MANAGER_ICONS = {
     "Dashboard": ":material/dashboard:", "Properties & Units": ":material/apartment:",
-    "Tenants & Leases": ":material/group:", "Rent & Payments": ":material/payments:",
+    "Tenants & Leases": ":material/group:", "Lease Renewals": ":material/autorenew:",
+    "Rent & Payments": ":material/payments:",
     "Maintenance": ":material/build:", "Reports": ":material/bar_chart:",
+    "Profitability": ":material/trending_up:",
     "Announcements": ":material/campaign:", "Settings": ":material/settings:",
 }
 

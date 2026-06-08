@@ -114,17 +114,32 @@ def empty_state(icon_name: str, title: str, body: str = "") -> None:
 
 
 def property_card(name: str, city: str, address: str, units: int,
-                  occupied: int, occupancy: float, rent_roll: str) -> str:
-    """Return a premium property card (HTML string) for the Properties grid."""
+                  occupied: int, occupancy: float, rent_roll: str,
+                  cover_src: str | None = None) -> str:
+    """Return a premium property card (HTML string) for the Properties grid.
+
+    If ``cover_src`` (an image URL / data URI) is given, the cover shows the
+    photo; otherwise it falls back to a deterministic gradient + skyline.
+    """
     cover = _COVERS[sum(ord(c) for c in name) % len(_COVERS)]
     pct = round(occupancy * 100)
     tone = "green" if pct >= 90 else ("amber" if pct >= 50 else "red")
     e = html.escape
+    if cover_src:
+        cover_html = (
+            f"<div class='rh-pcard-cover has-photo'>"
+            f"<img class='rh-pcard-img' src='{e(cover_src)}' alt='' />"
+            f"<span class='rh-pcard-city'>{e(city)}</span></div>"
+        )
+    else:
+        cover_html = (
+            f"<div class='rh-pcard-cover' style='background:{cover}'>{_SKYLINE}"
+            f"<span class='rh-pcard-ico'>{icons.svg('building', 22)}</span>"
+            f"<span class='rh-pcard-city'>{e(city)}</span></div>"
+        )
     return (
         f"<div class='rh-pcard'>"
-        f"<div class='rh-pcard-cover' style='background:{cover}'>{_SKYLINE}"
-        f"<span class='rh-pcard-ico'>{icons.svg('building', 22)}</span>"
-        f"<span class='rh-pcard-city'>{e(city)}</span></div>"
+        f"{cover_html}"
         f"<div class='rh-pcard-body'>"
         f"<div class='rh-pcard-head'>"
         f"<div><div class='rh-pcard-name'>{e(name)}</div>"

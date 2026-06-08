@@ -11,7 +11,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 import auth
+import geo
 import lease_pdf
+import media
 import notifications
 import repo
 import storage
@@ -22,9 +24,11 @@ SECTIONS = [
     "Dashboard",
     "Properties & Units",
     "Tenants & Leases",
+    "Lease Renewals",
     "Rent & Payments",
     "Maintenance",
     "Reports",
+    "Profitability",
     "Announcements",
     "Settings",
 ]
@@ -51,6 +55,10 @@ def render(user, section: str) -> None:
         _maintenance(user)
     elif section == "Reports":
         _reports(user)
+    elif section == "Lease Renewals":
+        _renewals(user)
+    elif section == "Profitability":
+        _profitability(user)
     elif section == "Announcements":
         _announcements(user)
     elif section == "Settings":
@@ -74,6 +82,15 @@ def _dashboard(user) -> None:
               f"{s['delinquent_count']} delinquent", delta_color="inverse")
     c4.metric("Occupancy", f"{s['occupancy']*100:.0f}%",
               f"{s['occupied_units']}/{s['total_units']} units")
+
+    # KPI sparklines — direction over the last 6 months
+    trend = _collection_trend_cached()
+    if len(trend) >= 2:
+        sdf = pd.DataFrame(trend)
+        s1, s2, s3 = st.columns(3)
+        _spark(s1, sdf, "collected", "Collected", "#5E6B4D", utils.money)
+        _spark(s2, sdf, "rate", "Collection rate", "#2E7D55", lambda v: f"{v:.0f}%")
+        _spark(s3, sdf, "outstanding", "Outstanding", "#C0492F", utils.money)
 
     st.divider()
     left, right = st.columns([1, 1])
@@ -122,6 +139,57 @@ def _dashboard(user) -> None:
                 unsafe_allow_html=True,
             )
 
+    st.divider()
+    _portfolio_map()
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _collection_trend_cached():
+    return repo.collection_trend()
+
+
+def _spark(col, sdf, key, label, color, fmt) -> None:
+    last = sdf[key].iloc[-1]
+    col.markdown(
+        f"<div style='font-size:0.78rem;color:#6B7167;font-weight:600;"
+        f"text-transform:uppercase;letter-spacing:0.04em'>{label}</div>"
+        f"<div style='font-family:\"Plus Jakarta Sans\",sans-serif;font-weight:800;"
+        f"font-size:1.25rem;color:#1E231D;margin:2px 0 2px'>{fmt(last)}</div>",
+        unsafe_allow_html=True,
+    )
+    chart = (
+        alt.Chart(sdf)
+        .mark_area(line={"color": color, "strokeWidth": 2}, color=color, opacity=0.15)
+        .encode(
+            x=alt.X("label:N", sort=list(sdf["label"]), axis=None),
+            y=alt.Y(f"{key}:Q", axis=None),
+            tooltip=[alt.Tooltip("label:N", title="Month"),
+                     alt.Tooltip(f"{key}:Q", format=",.0f")],
+        )
+        .properties(height=50)
+    )
+    col.altair_chart(chart, use_container_width=True)
+
+
+def _portfolio_map() -> None:
+    props = repo.list_properties()
+    rows = []
+    for p in props:
+        stt = repo.property_stats(p["id"])
+        pct = round(stt["occupancy"] * 100)
+        color = "#2E7D55" if pct >= 90 else ("#B9821B" if pct >= 50 else "#C0492F")
+        lat, lon = geo.coords(p["address"], p["city"])
+        rows.append({"lat": lat, "lon": lon, "color": color,
+                     "size": 40 + stt["units"] * 6, "name": p["name"]})
+    if not rows:
+        return
+    ui.section("Portfolio Map", "Pins colored by occupancy (green ≥90%, amber ≥50%, red below)")
+    try:
+        st.map(pd.DataFrame(rows), latitude="lat", longitude="lon",
+               color="color", size="size")
+    except Exception:
+        st.map(pd.DataFrame(rows), latitude="lat", longitude="lon")
+
 
 # --------------------------------------------------------------------------- #
 # Properties & units
@@ -150,9 +218,11 @@ def _properties(user) -> None:
         for i, p in enumerate(props):
             stt = repo.property_stats(p["id"])
             name = p["name"] + ("  (archived)" if p["status"] == "archived" else "")
+            cover = repo.property_cover(p["id"])
+            cover_src = media.cover_uri(cover["file_path"]) if cover else None
             card = ui.property_card(
                 name, p["city"], p["address"], stt["units"], stt["occupied"],
-                stt["occupancy"], utils.money(stt["rent_roll"]),
+                stt["occupancy"], utils.money(stt["rent_roll"]), cover_src=cover_src,
             )
             with cols[i % 3]:
                 # The whole card is clickable: the keyed container gets a stable
@@ -204,6 +274,25 @@ def _property_detail(sel_id, user) -> None:
 
     st.subheader(prop["name"])
     st.caption(f"{prop['address']} · {prop['city']}, {prop['state']}")
+
+    with st.expander("Cover photo", icon=":material/image:"):
+        existing = repo.property_cover(prop["id"])
+        if existing:
+            src = media.cover_uri(existing["file_path"])
+            if src:
+                st.markdown(
+                    f"<img src='{src}' style='width:100%;max-height:180px;object-fit:cover;"
+                    f"border-radius:12px;border:1px solid var(--border)' alt='cover' />",
+                    unsafe_allow_html=True,
+                )
+        up = st.file_uploader("Upload a cover photo (JPG/PNG)",
+                              type=["jpg", "jpeg", "png"], key=f"cover_{prop['id']}")
+        if up is not None:
+            path, fname = storage.save_upload(up, subdir="property_photos")
+            repo.add_attachment("property_cover", prop["id"], path, fname, user["id"])
+            st.success("Cover photo updated.")
+            st.rerun()
+
     st.write("")
     _manage_property(prop, user)
 
@@ -855,3 +944,115 @@ def _settings(user) -> None:
                  disabled=not notifications.can_send()):
         sent = _send_rent_reminders()
         st.success(f"Sent {sent} reminder(s).")
+
+
+# --------------------------------------------------------------------------- #
+# Profitability
+# --------------------------------------------------------------------------- #
+
+def _profitability(user) -> None:
+    st.header("Profitability")
+    st.caption("Rent collected minus maintenance cost, per property (all-time). "
+               "Is each property actually making money?")
+    rows = repo.property_profitability()
+    if not rows:
+        ui.empty_state("building", "No data yet",
+                       "Add properties and record payments to see profitability.")
+        return
+
+    df = pd.DataFrame(rows)
+    chart = (
+        alt.Chart(df)
+        .mark_bar()
+        .encode(
+            x=alt.X("property_name:N", sort=list(df["property_name"]), title=None,
+                    axis=alt.Axis(labelAngle=0)),
+            y=alt.Y("net:Q", title="Net ($)"),
+            color=alt.condition("datum.net >= 0", alt.value("#2E7D55"),
+                                alt.value("#C0492F")),
+            tooltip=[alt.Tooltip("property_name:N", title="Property"),
+                     alt.Tooltip("collected:Q", title="Collected", format=",.0f"),
+                     alt.Tooltip("maintenance_cost:Q", title="Maintenance", format=",.0f"),
+                     alt.Tooltip("net:Q", title="Net", format=",.0f")],
+        )
+        .properties(height=300)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+    show = pd.DataFrame([{
+        "Property": r["property_name"],
+        "Collected": utils.money(r["collected"]),
+        "Maintenance": utils.money(r["maintenance_cost"]),
+        "Net": utils.money(r["net"]),
+    } for r in rows])
+    st.dataframe(show, use_container_width=True, hide_index=True)
+    st.metric("Portfolio net", utils.money(sum(r["net"] for r in rows)))
+    _csv_download(df, "profitability.csv")
+
+
+# --------------------------------------------------------------------------- #
+# Lease renewals
+# --------------------------------------------------------------------------- #
+
+def _renewals(user) -> None:
+    from datetime import date
+
+    st.header("Lease Renewals")
+    st.caption("Leases ending within 90 days. Draft a renewal in one click — the "
+               "payment-history note flags tenants who often pay late.")
+
+    today = utils.today()
+    upcoming = []
+    for lease in repo.active_leases():
+        try:
+            ed = date.fromisoformat(lease["end_date"])
+        except (ValueError, TypeError):
+            continue
+        days = (ed - today).days
+        if days <= 90:
+            upcoming.append((days, lease))
+    upcoming.sort(key=lambda x: x[0])
+
+    if not upcoming:
+        st.success("No leases are expiring in the next 90 days.")
+        return
+
+    last_bucket = None
+    for days, lease in upcoming:
+        bucket = ("Next 30 days" if days <= 30
+                  else "31–60 days" if days <= 60 else "61–90 days")
+        if bucket != last_bucket:
+            ui.section(bucket)
+            last_bucket = bucket
+
+        tnames = [t["name"] for t in repo.lease_tenants(lease["id"])]
+        rel = repo.payment_reliability(lease)
+        with st.container(border=True):
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                when = (f"{days} days left" if days >= 0
+                        else f"expired {abs(days)} days ago")
+                st.markdown(f"**{lease['property_name']} · {lease['unit_label']}** — "
+                            f"{', '.join(tnames) or '—'}")
+                st.caption(f"Ends {lease['end_date']} · {when} · "
+                           f"Rent {utils.money(lease['rent_amount'])}")
+                if rel["flag"] in ("watch", "unreliable"):
+                    who = ", ".join(tnames) or "This tenant"
+                    with st.popover("⚠ Payment history"):
+                        st.markdown(
+                            f"**{who} doesn't usually pay on time.** Paid late "
+                            f"{rel['late']} of {rel['total']} payments "
+                            f"({rel['rate'] * 100:.0f}%). Worth weighing before you re-sign.")
+            with c2:
+                fields = _lease_fields(lease, tnames)
+                try:
+                    new_end = utils.add_months(
+                        date.fromisoformat(lease["end_date"]), 12).isoformat()
+                    fields = {**fields, "start_date": lease["end_date"],
+                              "end_date": new_end}
+                except Exception:
+                    pass
+                fname, data = _lease_pdf_for(fields, user)
+                st.download_button("Draft renewal", data, file_name=f"renewal_{fname}",
+                                   mime="application/pdf", key=f"renew_{lease['id']}",
+                                   use_container_width=True, icon=":material/note_add:")

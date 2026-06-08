@@ -291,6 +291,11 @@ hr {{ border-color: {CARD_BORDER}; }}
 .rh-pcard-cover .rh-pcard-city {{ position:relative; z-index:1; font-size:0.8rem; font-weight:600; opacity:.95;
     text-transform:uppercase; letter-spacing:0.06em; }}
 .rh-pcard-cover .rh-pcard-ico {{ position:absolute; z-index:1; top:12px; right:14px; opacity:.85; }}
+.rh-pcard-cover.has-photo {{ background:#2d3340; }}
+.rh-pcard-cover .rh-pcard-img {{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }}
+.rh-pcard-cover.has-photo::after {{ content:''; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%); }}
+.rh-pcard-cover.has-photo .rh-pcard-city {{ z-index:2; text-shadow:0 1px 4px rgba(0,0,0,0.6); }}
 .rh-pcard-body {{ padding:14px 16px 16px; }}
 .rh-pcard-head {{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }}
 .rh-pcard-name {{ font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.05rem; color:{INK}; line-height:1.2; }}

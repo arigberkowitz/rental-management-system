@@ -680,6 +680,91 @@ def ticket_updates(ticket_id, tenant_visible_only=False):
     return db.query_all(sql, (ticket_id,))
 
 
+def collection_trend(months: int = 6):
+    """Per-period expected/collected/rate/outstanding for dashboard sparklines."""
+    out = []
+    for p in utils.recent_periods(months):
+        roll = rent_roll(p)
+        expected = sum(r["charged"] for r in roll)
+        collected = sum(min(r["paid"], r["charged"]) for r in roll)
+        out.append({
+            "period": p,
+            "label": utils.period_label(p),
+            "expected": round(expected, 2),
+            "collected": round(collected, 2),
+            "rate": round((collected / expected * 100) if expected else 0, 1),
+            "outstanding": round(sum(max(r["balance"], 0) for r in roll), 2),
+        })
+    return out
+
+
+def property_profitability():
+    """Per active property: rent collected, maintenance cost, and net."""
+    rows = db.query_all(
+        """
+        SELECT pr.id AS property_id, pr.name AS property_name,
+          COALESCE((SELECT SUM(p.amount) FROM payments p
+                    JOIN leases l ON l.id = p.lease_id
+                    JOIN units u ON u.id = l.unit_id
+                    WHERE u.property_id = pr.id AND p.status = 'succeeded'), 0) AS collected,
+          COALESCE((SELECT SUM(t.cost) FROM maintenance_tickets t
+                    JOIN units u ON u.id = t.unit_id
+                    WHERE u.property_id = pr.id), 0) AS maintenance_cost
+        FROM properties pr
+        WHERE pr.status = 'active'
+        ORDER BY pr.name
+        """
+    )
+    result = []
+    for r in rows:
+        collected = float(r["collected"] or 0)
+        cost = float(r["maintenance_cost"] or 0)
+        result.append({
+            "property_name": r["property_name"],
+            "collected": round(collected, 2),
+            "maintenance_cost": round(cost, 2),
+            "net": round(collected - cost, 2),
+        })
+    return result
+
+
+def payment_reliability(lease) -> dict:
+    """On-time vs late payment history for a lease (by paid_at vs due date)."""
+    from datetime import date as _date
+
+    pays = db.query_all(
+        "SELECT period, paid_at FROM payments WHERE lease_id=? AND status='succeeded'",
+        (lease["id"],),
+    )
+    total = late = 0
+    for p in pays:
+        per, paid_at = p["period"], p["paid_at"]
+        if not per or not paid_at:
+            continue
+        try:
+            due = utils.due_date_for(per, lease["due_day"])
+            paid = _date.fromisoformat(str(paid_at)[:10])
+        except (ValueError, TypeError):
+            continue
+        total += 1
+        if paid > due:
+            late += 1
+    if total == 0:
+        return {"total": 0, "late": 0, "rate": 0.0, "flag": "new"}
+    rate = late / total
+    flag = "unreliable" if rate >= 0.5 else ("watch" if rate >= 0.25 else "reliable")
+    return {"total": total, "late": late, "rate": rate, "flag": flag}
+
+
+def property_cover(property_id: int):
+    """Most recent cover-photo attachment for a property, or None."""
+    return db.query_one(
+        "SELECT * FROM attachments WHERE parent_type='property_cover' AND parent_id=? "
+        "ORDER BY created_at DESC, id DESC LIMIT 1",
+        (property_id,),
+    )
+
+
 def maintenance_cost_by_property():
     return db.query_all(
         """
