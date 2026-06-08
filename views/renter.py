@@ -81,9 +81,10 @@ def _dashboard(user, lease) -> None:
     )
     autopay_pill = ("<span class='rh-badge' style='background:rgba(255,255,255,.16);color:#eaf3e2'>"
                     "Autopay on</span>") if autopay_on else ""
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""
-        <div class='rh-balance'>
+        <div class='rh-balance' style='margin-bottom:18px'>
           <div style='display:flex;justify-content:space-between;align-items:flex-start'>
             <div>
               <div class='rp-balance-label'>Balance due</div>
@@ -116,6 +117,7 @@ def _dashboard(user, lease) -> None:
                    f"{due.strftime('%b %d')}.")
 
     # ---- Quick links (rounded tiles) ------------------------------------- #
+    st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
     ui.section("Quick links")
     links = [
         ("card", "Pay Rent", "Pay Rent"),

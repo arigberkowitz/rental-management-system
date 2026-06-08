@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import base64
 import io
 
+import altair as alt
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 import auth
+import lease_pdf
 import repo
 import storage
 import ui
@@ -119,23 +123,38 @@ def _dashboard(user) -> None:
 # Properties & units
 # --------------------------------------------------------------------------- #
 
+def _open_property(pid) -> None:
+    st.session_state["open_property"] = pid
+
+
 def _properties(user) -> None:
     st.header("Properties & units")
+
+    # Clicking a property's button opens its detail view directly (in-session
+    # rerun, so login is preserved — a full-page link would reset session state).
+    sel_id = st.session_state.get("open_property")
+    if sel_id is not None:
+        _property_detail(sel_id, user)
+        return
+
     show_archived = st.toggle("Show archived", value=False)
     props = repo.list_properties(include_archived=show_archived)
 
     if props:
+        st.caption("Click a property to manage its units and details.")
         cols = st.columns(3)
         for i, p in enumerate(props):
             stt = repo.property_stats(p["id"])
             name = p["name"] + ("  (archived)" if p["status"] == "archived" else "")
-            cols[i % 3].markdown(
-                ui.property_card(
-                    name, p["city"], p["address"], stt["units"], stt["occupied"],
-                    stt["occupancy"], utils.money(stt["rent_roll"]),
-                ),
-                unsafe_allow_html=True,
+            card = ui.property_card(
+                name, p["city"], p["address"], stt["units"], stt["occupied"],
+                stt["occupancy"], utils.money(stt["rent_roll"]),
             )
+            with cols[i % 3]:
+                st.markdown(card, unsafe_allow_html=True)
+                st.button(f"Open {p['name']} →", key=f"open_{p['id']}",
+                          use_container_width=True,
+                          on_click=_open_property, args=(p["id"],))
 
     with st.expander("Add a property", icon=":material/add:"):
         with st.form("add_property", clear_on_submit=True):
@@ -157,13 +176,27 @@ def _properties(user) -> None:
     if not props:
         ui.empty_state("building", "No properties yet",
                        "Add your first property above to start building your portfolio.")
+
+
+def _close_property() -> None:
+    st.session_state.pop("open_property", None)
+
+
+def _property_detail(sel_id, user) -> None:
+    """Full detail view for one property, reached by clicking its card."""
+    prop = next((p for p in repo.list_properties(include_archived=True)
+                 if str(p["id"]) == str(sel_id)), None)
+
+    st.button("Back to properties", icon=":material/arrow_back:",
+              on_click=_close_property)
+
+    if not prop:
+        st.warning("That property couldn't be found.")
         return
 
-    st.divider()
-    st.subheader("Manage a property")
-    pmap = {f"{p['name']} ({p['city']})": p for p in props}
-    choice = st.selectbox("Select property", list(pmap.keys()))
-    prop = pmap[choice]
+    st.subheader(prop["name"])
+    st.caption(f"{prop['address']} · {prop['city']}, {prop['state']}")
+    st.write("")
     _manage_property(prop, user)
 
 
@@ -264,8 +297,49 @@ def _manage_property(prop, user) -> None:
 # Tenants & leases
 # --------------------------------------------------------------------------- #
 
+def _lease_pdf_for(lease_fields: dict, user) -> tuple[str, bytes]:
+    """Build a lease PDF (bytes) + filename from a dict of lease fields."""
+    data = lease_pdf.build_lease_pdf(
+        landlord=user.get("name") or "RentHarbor Property Management",
+        property_name=lease_fields["property_name"],
+        property_address=lease_fields.get("property_address", ""),
+        unit_label=lease_fields["unit_label"],
+        tenants=lease_fields["tenants"],
+        rent=lease_fields["rent"],
+        deposit=lease_fields["deposit"],
+        due_day=lease_fields["due_day"],
+        late_fee=lease_fields["late_fee"],
+        start_date=lease_fields["start_date"],
+        end_date=lease_fields["end_date"],
+    )
+    safe = f"lease_{lease_fields['property_name']}_{lease_fields['unit_label']}.pdf"
+    safe = safe.replace(" ", "_").replace("/", "-")
+    return safe, data
+
+
+def _show_lease_pdf(fname: str, data: bytes, heading: str) -> None:
+    """Render a one-click download plus an inline preview (opens the PDF)."""
+    ui.section(heading)
+    st.download_button("Download lease PDF", data, file_name=fname,
+                       mime="application/pdf", type="primary")
+    b64 = base64.b64encode(data).decode()
+    components.html(
+        f"<iframe title='Lease preview' src='data:application/pdf;base64,{b64}' "
+        f"style='width:100%;height:560px;border:1px solid #E7E7E0;border-radius:12px'></iframe>",
+        height=580,
+    )
+
+
 def _tenants(user) -> None:
     st.header("Tenants & leases")
+
+    # Freshly created lease: show its generated PDF (preview + download) up top.
+    pending = st.session_state.pop("new_lease_pdf", None)
+    if pending:
+        st.success("Lease created and unit marked occupied. Your lease document is ready.")
+        _show_lease_pdf(pending[0], pending[1], "Lease document")
+        st.divider()
+
     leases = repo.active_leases()
     query = st.text_input("Search", placeholder="Filter by property, unit, or tenant…",
                           label_visibility="collapsed",
@@ -329,7 +403,14 @@ def _tenants(user) -> None:
                         repo.create_lease(unit["id"], tids, float(rent), float(deposit),
                                           int(due_day), float(late_fee),
                                           start.isoformat(), end.isoformat(), user["id"])
-                        st.success("Lease created and unit marked occupied.")
+                        st.session_state["new_lease_pdf"] = _lease_pdf_for({
+                            "property_name": unit["property_name"],
+                            "unit_label": unit["label"],
+                            "tenants": [tmap[t]["name"] for t in tsel],
+                            "rent": rent, "deposit": deposit, "due_day": due_day,
+                            "late_fee": late_fee,
+                            "start_date": start.isoformat(), "end_date": end.isoformat(),
+                        }, user)
                         st.rerun()
 
     with col_manage:
@@ -345,7 +426,18 @@ def _tenants(user) -> None:
                      f"**Ends:** {lease['end_date']}")
             st.write(f"**Current balance:** {utils.money(repo.lease_balance(lease['id']))}")
 
-            up = st.file_uploader("Upload lease document (PDF)", type=["pdf"],
+            fname, data = _lease_pdf_for({
+                "property_name": lease["property_name"],
+                "unit_label": lease["unit_label"],
+                "tenants": [t["name"] for t in repo.lease_tenants(lease["id"])],
+                "rent": lease["rent_amount"], "deposit": lease["deposit"],
+                "due_day": lease["due_day"], "late_fee": lease["late_fee_amount"],
+                "start_date": lease["start_date"], "end_date": lease["end_date"],
+            }, user)
+            st.download_button("Generate lease PDF", data, file_name=fname,
+                               mime="application/pdf", icon=":material/description:")
+
+            up = st.file_uploader("Upload signed lease document (PDF)", type=["pdf"],
                                   key="lease_doc")
             if up is not None:
                 path, fname = storage.save_upload(up, subdir="leases")
@@ -563,7 +655,25 @@ def _reports(user) -> None:
                 "Collected": sum(min(r["paid"], r["charged"]) for r in roll),
             })
         df = pd.DataFrame(data).set_index("Period")
-        st.bar_chart(df)
+        long = df.reset_index().melt("Period", var_name="Series", value_name="Amount")
+        order = list(df.index)
+        chart = (
+            alt.Chart(long)
+            .mark_bar()
+            .encode(
+                x=alt.X("Period:N", sort=order, title=None,
+                        axis=alt.Axis(labelAngle=0)),
+                xOffset=alt.XOffset("Series:N", sort=["Expected", "Collected"]),
+                y=alt.Y("Amount:Q", title=None),
+                color=alt.Color("Series:N", sort=["Expected", "Collected"],
+                                scale=alt.Scale(domain=["Expected", "Collected"],
+                                                range=["#7FB2E5", "#1565C0"]),
+                                legend=alt.Legend(title=None, orient="bottom")),
+                tooltip=["Period", "Series", alt.Tooltip("Amount:Q", format=",.0f")],
+            )
+            .properties(height=300)
+        )
+        st.altair_chart(chart, use_container_width=True)
         st.dataframe(df.map(utils.money), use_container_width=True)
         _csv_download(df.reset_index(), "rent_collection.csv")
 

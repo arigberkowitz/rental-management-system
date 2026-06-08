@@ -104,13 +104,19 @@ hr {{ border-color: {CARD_BORDER}; }}
     box-shadow: 0 0 0 3px {PRIMARY_SOFT} !important;
 }}
 
-/* ---- Tabs ---- */
-.stTabs [data-baseweb="tab-list"] {{ gap: 4px; }}
+/* ---- Tabs (spaced out so each label reads as its own thing) ---- */
+.stTabs [data-baseweb="tab-list"] {{ gap: 34px; border-bottom: 1px solid {CARD_BORDER}; }}
 .stTabs [data-baseweb="tab"] {{
     border-radius: 10px 10px 0 0; font-weight: 600; color: {MUTED};
+    padding: 10px 4px; font-size: 1rem;
 }}
+.stTabs [data-baseweb="tab"]:hover {{ color: {INK}; }}
 .stTabs [aria-selected="true"] {{ color: {PRIMARY}; }}
-.stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; }}
+.stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; height: 3px; }}
+
+/* ---- Clickable property card (whole card is a link) ---- */
+a.rh-pcard-link, a.rh-pcard-link:hover {{ text-decoration: none; color: inherit; display: block; }}
+a.rh-pcard-link {{ cursor: pointer; }}
 
 /* ---- Metric cards ---- */
 [data-testid="stMetric"] {{
