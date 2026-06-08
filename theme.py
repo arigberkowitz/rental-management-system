@@ -114,9 +114,22 @@ hr {{ border-color: {CARD_BORDER}; }}
 .stTabs [aria-selected="true"] {{ color: {PRIMARY}; }}
 .stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; height: 3px; }}
 
-/* ---- Clickable property card (whole card is a link) ---- */
-a.rh-pcard-link, a.rh-pcard-link:hover {{ text-decoration: none; color: inherit; display: block; }}
-a.rh-pcard-link {{ cursor: pointer; }}
+/* ---- Clickable property card: overlay a transparent button across the whole
+       card so clicking anywhere on it opens the property (no logout — it's an
+       in-session rerun, not a page navigation). ---- */
+[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) {{
+    position: relative;
+}}
+[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) [data-testid="stButton"] {{
+    position: absolute; inset: 0; margin: 0; z-index: 4;
+}}
+[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard) [data-testid="stButton"] > button {{
+    width: 100%; height: 100%; opacity: 0; border: none; background: transparent; cursor: pointer;
+}}
+/* keep the hover lift even though the button sits on top */
+[data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .rh-pcard):hover .rh-pcard {{
+    transform: translateY(-2px); box-shadow: 0 12px 30px rgba(30,35,29,0.10);
+}}
 
 /* ---- Metric cards ---- */
 [data-testid="stMetric"] {{

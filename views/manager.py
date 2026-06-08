@@ -151,10 +151,13 @@ def _properties(user) -> None:
                 stt["occupancy"], utils.money(stt["rent_roll"]),
             )
             with cols[i % 3]:
-                st.markdown(card, unsafe_allow_html=True)
-                st.button(f"Open {p['name']} →", key=f"open_{p['id']}",
-                          use_container_width=True,
-                          on_click=_open_property, args=(p["id"],))
+                # The whole card is clickable: a transparent button is overlaid
+                # across the card via CSS (kept in-session so login is preserved).
+                with st.container():
+                    st.markdown(card, unsafe_allow_html=True)
+                    st.button(f"Open {p['name']}", key=f"open_{p['id']}",
+                              use_container_width=True,
+                              on_click=_open_property, args=(p["id"],))
 
     with st.expander("Add a property", icon=":material/add:"):
         with st.form("add_property", clear_on_submit=True):
@@ -317,6 +320,21 @@ def _lease_pdf_for(lease_fields: dict, user) -> tuple[str, bytes]:
     return safe, data
 
 
+def _lease_fields(lease, tenant_names) -> dict:
+    """Map an active-lease row + tenant names to the lease_pdf field dict."""
+    return {
+        "property_name": lease["property_name"],
+        "unit_label": lease["unit_label"],
+        "tenants": tenant_names,
+        "rent": lease["rent_amount"],
+        "deposit": lease["deposit"],
+        "due_day": lease["due_day"],
+        "late_fee": lease["late_fee_amount"],
+        "start_date": lease["start_date"],
+        "end_date": lease["end_date"],
+    }
+
+
 def _show_lease_pdf(fname: str, data: bytes, heading: str) -> None:
     """Render a one-click download plus an inline preview (opens the PDF)."""
     ui.section(heading)
@@ -345,11 +363,14 @@ def _tenants(user) -> None:
                           label_visibility="collapsed",
                           icon=":material/search:").strip().lower()
     rows = []
+    filtered = []  # (lease, tenant_names) for the lease-documents list
     for l in leases:
-        tenants = ", ".join(t["name"] for t in repo.lease_tenants(l["id"])) or "—"
+        tnames = [t["name"] for t in repo.lease_tenants(l["id"])]
+        tenants = ", ".join(tnames) or "—"
         haystack = f"{l['property_name']} {l['unit_label']} {tenants}".lower()
         if query and query not in haystack:
             continue
+        filtered.append((l, tnames))
         rows.append({
             "Property": l["property_name"], "Unit": l["unit_label"], "Tenant(s)": tenants,
             "Rent": utils.money(l["rent_amount"]), "Due day": l["due_day"],
@@ -365,6 +386,18 @@ def _tenants(user) -> None:
     else:
         ui.empty_state("users", "No active leases yet",
                        "Create a lease below to assign a tenant to a vacant unit.")
+
+    # Per-tenant lease document — download each existing lease's PDF directly.
+    if filtered:
+        with st.expander(f"Lease documents ({len(filtered)})", icon=":material/description:"):
+            for l, tnames in filtered:
+                who = ", ".join(tnames) or "—"
+                c1, c2 = st.columns([3, 1])
+                c1.markdown(f"**{l['property_name']} · {l['unit_label']}** — {who}")
+                fname, data = _lease_pdf_for(_lease_fields(l, tnames), user)
+                c2.download_button("Lease PDF", data, file_name=fname,
+                                   mime="application/pdf", key=f"leasedoc_{l['id']}",
+                                   use_container_width=True, icon=":material/download:")
 
     st.divider()
     col_new, col_manage = st.columns(2)
