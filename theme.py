@@ -115,20 +115,24 @@ hr {{ border-color: {CARD_BORDER}; }}
 .stTabs [data-baseweb="tab-highlight"] {{ background: {PRIMARY}; height: 3px; }}
 
 /* ---- Clickable property card -------------------------------------------- #
-   Each card lives in a keyed container (class st-key-pcard_<id>). We overlay a
-   transparent Streamlit button across the whole container so a click anywhere
-   opens the property. It's an in-session rerun (not a page navigation), so the
-   user stays logged in. ------------------------------------------------------ */
+   Each card lives in a keyed container (class st-key-pcard_<id>). The button is
+   a NORMAL in-flow element given a real height — so its clickable area is
+   guaranteed by layout (no absolute-coverage guessing). The card visual is laid
+   absolutely on TOP of the button and made click-through, so a click anywhere on
+   the card hits the button. In-session rerun, so login is preserved. --------- */
 [class*="st-key-pcard_"] {{ position: relative; }}
-/* The card is visual only — let clicks pass THROUGH it to the button beneath,
-   so a click anywhere on the card registers regardless of paint order. */
-[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; pointer-events: none; }}
-/* The transparent button fills the whole card area and catches the clicks. */
-[class*="st-key-pcard_"] [data-testid="stButton"] {{
-    position: absolute; inset: 0; margin: 0; z-index: 1; height: 100%;
+/* The visual card sits on top, but ignores clicks (they pass to the button).
+   Target the container that actually holds the card via :has, and also any
+   first-child fallback, so the card is always click-through and on top. */
+[class*="st-key-pcard_"] [data-testid="stElementContainer"]:has(.rh-pcard),
+[class*="st-key-pcard_"] [data-testid="stElementContainer"]:first-child {{
+    position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
 }}
+[class*="st-key-pcard_"] .rh-pcard {{ margin-bottom: 0; pointer-events: none; }}
+/* The button is the real clickable area: full width, card-height, invisible. */
+[class*="st-key-pcard_"] [data-testid="stButton"] {{ margin: 0; }}
 [class*="st-key-pcard_"] [data-testid="stButton"] > button {{
-    width: 100%; height: 100%; min-height: 100%;
+    width: 100%; min-height: 268px; height: 268px;
     opacity: 0; border: none; background: transparent; cursor: pointer;
 }}
 /* keep the card's hover lift */
